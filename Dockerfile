@@ -36,6 +36,7 @@ RUN set -eux; \
     php-imap \
     php-ldap \
     unzip \
+    ca-certificates \
     ; \
     mkdir /build;
 
