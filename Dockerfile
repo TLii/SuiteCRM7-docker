@@ -148,7 +148,7 @@ VOLUME ${SUITECRM_INSTALL_DIR}/docker-configs
 
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 COPY --from=final --chown=www-data:www-data /final /usr/src/suitecrm
-COPY --chown=www-data:www-data config_si.php /${SUITECRM_INSTALL_DIR}/docker-configs
+COPY --chown=www-data:www-data config_si.php /${SUITECRM_INSTALL_DIR}/docker-configs/
 
 # Use uid and gid of www-data used in nginx image
 RUN chmod a+x /docker-entrypoint.sh;
@@ -237,7 +237,7 @@ VOLUME ${SUITECRM_INSTALL_DIR}/docker-configs
 
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 COPY --from=final --chown=www-data:www-data /final /usr/src/suitecrm
-COPY --chown=www-data:www-data config_si.php /${SUITECRM_INSTALL_DIR}/docker-configs
+COPY --chown=www-data:www-data config_si.php /${SUITECRM_INSTALL_DIR}/docker-configs/
 
 # Use uid and gid of www-data used in nginx image
 RUN chmod a+x /docker-entrypoint.sh;
