@@ -69,7 +69,7 @@ jobs:
       uses: mr-smithers-excellent/docker-build-push@v5.6
       with:
         # Name of the Docker image
-        image: suitecrm8/suitecrm8-core
+        image: suitecrm7/suitecrm7
         # Tags override for Docker image
         tags: fpm-${{ env.BRANCH }}-latest, fpm-${{ env.BRANCH }}, fpm-${{ env.BUILD_VERSION }}, ${{ env.GITHUB_HASH }}  # optional
         # Target Docker registry
@@ -96,7 +96,7 @@ jobs:
       uses: mr-smithers-excellent/docker-build-push@v5.6
       with:
         # Name of the Docker image
-        image: suitecrm8/suitecrm8-core
+        image: suitecrm7/suitecrm7
         # Tags override for Docker image
         tags: apache2, apache2-latest, apache2-${{ env.BRANCH }}-latest, apache2-${{ env.BRANCH }}, apache2-${{ env.BUILD_VERSION }}, ${{ env.GITHUB_HASH }}  # optional
         # Target Docker registry
@@ -123,7 +123,7 @@ jobs:
       uses: mr-smithers-excellent/docker-build-push@v5.6
       with:
         # Name of the Docker image
-        image: suitecrm8/suitecrm8-core
+        image: suitecrm7/suitecrm7
         # Tags override for Docker image
         tags: apache2-${{ env.BRANCH }}-latest, apache2-${{ env.BRANCH }}, apache2-${{ env.BUILD_VERSION }}, ${{ env.GITHUB_HASH }}  # optional
         # Target Docker registry
@@ -142,28 +142,3 @@ jobs:
         password: ${{ secrets.REGISTRY_PASSWORD }} # optional
         # Adds latest tag to auto-generated GitOps tag
         addLatest: true # optional, default is false
-
-    - name: Checkout Chart
-      uses: actions/checkout@v3.0.0
-      with: 
-        repository: TLii/SuiteCRM8-chart
-        token: ${{ secrets.SUITECRM8_CHART_DISPATCHER }}
-        path: ./chart
-        ref: ${{ env.BRANCH }}
-      
-    - name: Update Chart Versions
-      run: |
-        CHARTVER=$(sed -n  '/^version:.*/p' ./chart/chart/Chart.yaml | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.)
-        sed -i "s/^version:.*/$CHARTVER/" ./chart/chart/Chart.yaml
-        sed -i "s/^appVersion:.*/appVersion: $BUILD_VERSION/" ./chart/chart/Chart.yaml
-        echo "Chart version: $CHARTVER\nApp Version: $BUILD_VERSION"
-        
-    - name: Push Chart
-      run: |
-        cd ./chart
-        git add .
-        git config user.name github-actions
-        git config user.email github-actions@github.com
-        git commit -am "Pipeline/Updated Chart version and App version"
-        git push
-   
