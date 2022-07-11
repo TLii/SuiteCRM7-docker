@@ -1,0 +1,169 @@
+name: Pipeline action
+
+on:
+  push:
+    branches:
+    - master
+    - develop
+  workflow_dispatch:
+  repository_dispatch:
+    types: [parent_changed]
+    
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check out CODE
+      uses: actions/checkout@v2
+    
+    - name: Get current commit ID
+      run: |
+        echo "GITHUB_HASH=$(git rev-parse --short "$GITHUB_SHA")" >> $GITHUB_ENV
+      
+    - name: Set branch after repo dispatch
+      if: github.event_name == 'repository_dispatch'
+      run: |
+        echo "BRANCH=develop" >> $GITHUB_ENV
+
+    - name: Set branch env for other triggers
+      if: github.event_name != 'repository_dispatch'
+      run: |
+        echo "BRANCH=$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_ENV
+              
+    - name: Set build version
+      run: |
+        echo "BUILD_VERSION=$BRANCH-$GITHUB_RUN_NUMBER" >> $GITHUB_ENV
+      
+    - name: Build master fpm image and push it to Registry
+      if: env.BRANCH == 'master'
+      # You may pin to the exact commit or the version.
+      # uses: mr-smithers-excellent/docker-build-push@a7fe6652db5c7274374844e81692992f5a2befb9
+      uses: mr-smithers-excellent/docker-build-push@v5.6
+      with:
+        # Name of the Docker image
+        image: suitecrm7/suitecrm7
+        # Tags override for Docker image
+        tags: fpm, fpm-latest, fpm-${{ env.BRANCH }}-latest, fpm-${{ env.BRANCH }}, fpm-${{ env.BUILD_VERSION }}, ${{ env.GITHUB_HASH }}  # optional
+        # Target Docker registry
+        registry: ${{ secrets.REGISTRY_URL }}
+        # Location of Dockerfile, if not Dockerfile in root directory
+        dockerfile: Dockerfile # optional, default is Dockerfile
+        # Docker build arguments passed via --build-arg
+        #buildArgs: # optional
+        # Docker build labels passed via --label
+        #labels: # optional
+        # Docker build target passed via --target
+        target: serve-php-fpm # optional
+        # Docker registry username
+        username:  ${{ secrets.REGISTRY_USER }}  # optional
+        # Docker registry password
+        password: ${{ secrets.REGISTRY_PASSWORD }} # optional
+        # Adds latest tag to auto-generated GitOps tag
+        addLatest: true # optional, default is false
+
+    - name: Build non-master fpm image and push it to Registry
+      if: env.BRANCH != 'master'
+      # You may pin to the exact commit or the version.
+      # uses: mr-smithers-excellent/docker-build-push@a7fe6652db5c7274374844e81692992f5a2befb9
+      uses: mr-smithers-excellent/docker-build-push@v5.6
+      with:
+        # Name of the Docker image
+        image: suitecrm8/suitecrm8-core
+        # Tags override for Docker image
+        tags: fpm-${{ env.BRANCH }}-latest, fpm-${{ env.BRANCH }}, fpm-${{ env.BUILD_VERSION }}, ${{ env.GITHUB_HASH }}  # optional
+        # Target Docker registry
+        registry: ${{ secrets.REGISTRY_URL }}
+        # Location of Dockerfile, if not Dockerfile in root directory
+        dockerfile: Dockerfile # optional, default is Dockerfile
+        # Docker build arguments passed via --build-arg
+        #buildArgs: # optional
+        # Docker build labels passed via --label
+        #labels: # optional
+        # Docker build target passed via --target
+        target: serve-php-fpm # optional
+        # Docker registry username
+        username:  ${{ secrets.REGISTRY_USER }}  # optional
+        # Docker registry password
+        password: ${{ secrets.REGISTRY_PASSWORD }} # optional
+        # Adds latest tag to auto-generated GitOps tag
+        addLatest: true # optional, default is false
+
+    - name: Build master apache2 image and push it to Registry
+      if: env.BRANCH == 'master'
+      # You may pin to the exact commit or the version.
+      # uses: mr-smithers-excellent/docker-build-push@a7fe6652db5c7274374844e81692992f5a2befb9
+      uses: mr-smithers-excellent/docker-build-push@v5.6
+      with:
+        # Name of the Docker image
+        image: suitecrm8/suitecrm8-core
+        # Tags override for Docker image
+        tags: apache2, apache2-latest, apache2-${{ env.BRANCH }}-latest, apache2-${{ env.BRANCH }}, apache2-${{ env.BUILD_VERSION }}, ${{ env.GITHUB_HASH }}  # optional
+        # Target Docker registry
+        registry: ${{ secrets.REGISTRY_URL }}
+        # Location of Dockerfile, if not Dockerfile in root directory
+        dockerfile: Dockerfile # optional, default is Dockerfile
+        # Docker build arguments passed via --build-arg
+        #buildArgs: # optional
+        # Docker build labels passed via --label
+        #labels: # optional
+        # Docker build target passed via --target
+        target: serve-php-apache2 # optional
+        # Docker registry username
+        username:  ${{ secrets.REGISTRY_USER }}  # optional
+        # Docker registry password
+        password: ${{ secrets.REGISTRY_PASSWORD }} # optional
+        # Adds latest tag to auto-generated GitOps tag
+        addLatest: true # optional, default is false
+        
+    - name: Build non-master apache2 image and push it to Registry
+      if: env.BRANCH != 'master'
+      # You may pin to the exact commit or the version.
+      # uses: mr-smithers-excellent/docker-build-push@a7fe6652db5c7274374844e81692992f5a2befb9
+      uses: mr-smithers-excellent/docker-build-push@v5.6
+      with:
+        # Name of the Docker image
+        image: suitecrm8/suitecrm8-core
+        # Tags override for Docker image
+        tags: apache2-${{ env.BRANCH }}-latest, apache2-${{ env.BRANCH }}, apache2-${{ env.BUILD_VERSION }}, ${{ env.GITHUB_HASH }}  # optional
+        # Target Docker registry
+        registry: ${{ secrets.REGISTRY_URL }}
+        # Location of Dockerfile, if not Dockerfile in root directory
+        dockerfile: Dockerfile # optional, default is Dockerfile
+        # Docker build arguments passed via --build-arg
+        #buildArgs: # optional
+        # Docker build labels passed via --label
+        #labels: # optional
+        # Docker build target passed via --target
+        target: serve-php-apache2 # optional
+        # Docker registry username
+        username:  ${{ secrets.REGISTRY_USER }}  # optional
+        # Docker registry password
+        password: ${{ secrets.REGISTRY_PASSWORD }} # optional
+        # Adds latest tag to auto-generated GitOps tag
+        addLatest: true # optional, default is false
+
+    - name: Checkout Chart
+      uses: actions/checkout@v3.0.0
+      with: 
+        repository: TLii/SuiteCRM8-chart
+        token: ${{ secrets.SUITECRM8_CHART_DISPATCHER }}
+        path: ./chart
+        ref: ${{ env.BRANCH }}
+      
+    - name: Update Chart Versions
+      run: |
+        CHARTVER=$(sed -n  '/^version:.*/p' ./chart/chart/Chart.yaml | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.)
+        sed -i "s/^version:.*/$CHARTVER/" ./chart/chart/Chart.yaml
+        sed -i "s/^appVersion:.*/appVersion: $BUILD_VERSION/" ./chart/chart/Chart.yaml
+        echo "Chart version: $CHARTVER\nApp Version: $BUILD_VERSION"
+        
+    - name: Push Chart
+      run: |
+        cd ./chart
+        git add .
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+        git commit -am "Pipeline/Updated Chart version and App version"
+        git push
+   
