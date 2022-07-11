@@ -1,4 +1,4 @@
-# SuiteCRM 8 image
+# SuiteCRM 7 image
 ## General information
 
 **This is an unnaffiliated project without links or input from *SalesAgility Inc*, which holds trademarked rights to the SuiteCRM brand.**
