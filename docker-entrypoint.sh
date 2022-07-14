@@ -114,9 +114,24 @@ if ([ ! -e /$SUITECRM_INSTALL_DIR/config.php ] && [ ! -e /$SUITECRM_INSTALL_DIR/
 			sourceTarArgs+=( --exclude "./$contentPath" )
 		fi
 	done
+
 	tar "${sourceTarArgs[@]}" . | tar "${targetTarArgs[@]}"
+
+	# See if modules need updating; save backups to <install_dir>/upload/docker-upgrade-backups/
+	mkdir -p $PWD/upload/docker-upgrade-backups
+	for modulePath in \
+		/usr/src/suitecrm/custom/modules/* \
+		/usr/src/suitecrm/modules/* \
+	; do
+		modulePath="${modulePath#/usr/src/suitecrm/}"
+		## Ignore all with /ext/, but not custom/Extension/*/Ext/. Kudos @pgr!
+		rsync -q -r -b -t -u --backup-dir=$PWD/upload/docker-upgrade-backups --update --exclude $modulePath/ext/* --exclude $modulePath/*/ext/* /usr/src/suitecrm/$modulePath $PWD/$modulePath
+	done
 	echo >&2 "Complete! SuiteCRM has been successfully copied to $PWD"
 fi
+
+
+
 
 # Use install.lock to check if already installed
 if [[ ! -f $SUITECRM_INSTALL_DIR/custom/install.lock ]] && [[ -n $SUITECRM_SILENT_INSTALL ]]; then
