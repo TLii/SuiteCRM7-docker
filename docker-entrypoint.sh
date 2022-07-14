@@ -26,11 +26,11 @@ user=www-data
 group=www-data
 
 # Test for necessary environment variables and exit if missing crucial ones.
-	[[ -z $SUITECRM_DATABASE_NAME ]] && (echo "ERROR: you need to set SUITECRM_DATABASE_NAME to continue"; exit 5)
-	[[ -z $SUITECRM_DATABASE_USER ]] && (echo "ERROR: you need to set SUITECRM_DATABASE_USER to continue"; exit 5)
-	[[ -z $SUITECRM_DATABASE_PASSWORD ]] && (echo "ERROR: you need to set SUITECRM_DATABASE_PASSWORD to continue"; exit 5)
-	[[ -z $SUITECRM_DATABASE_HOST ]] && (echo "ERROR: you need to set SUITECRM_DATABASE_HOST to continue"; exit 5)
-	[[ -z $SUITECRM_SITE_URL ]] && (echo "ERROR: you need to set SUITECRM_SITE_URL to continue"; exit 5)
+	[[ -z $SUITECRM_DATABASE_NAME ]] && (echo "ERROR: you need to set SUITECRM_DATABASE_NAME to continue"; exit 78)
+	[[ -z $SUITECRM_DATABASE_USER ]] && (echo "ERROR: you need to set SUITECRM_DATABASE_USER to continue"; exit 78)
+	[[ -z $SUITECRM_DATABASE_PASSWORD ]] && (echo "ERROR: you need to set SUITECRM_DATABASE_PASSWORD to continue"; exit 78)
+	[[ -z $SUITECRM_DATABASE_HOST ]] && (echo "ERROR: you need to set SUITECRM_DATABASE_HOST to continue"; exit 78)
+	[[ -z $SUITECRM_SITE_URL ]] && (echo "ERROR: you need to set SUITECRM_SITE_URL to continue"; exit 78)
 
 
 # Setup correct user; (c) Docker, Inc
@@ -122,13 +122,13 @@ fi
 if [[ ! -f $SUITECRM_INSTALL_DIR/custom/install.lock ]] && [[ -n $SUITECRM_SILENT_INSTALL ]]; then
     echo "Running silent install..." >&1;
     php -r "\$_SERVER['HTTP_HOST'] = 'localhost'; \$_SERVER['REQUEST_URI'] = '$SUITECRM_INSTALL_DIR/install.php';\$_REQUEST = array('goto' => 'SilentInstall', 'cli' => true);require_once '$SUITECRM_INSTALL_DIR/install.php';" >&1; 
-    touch $SUITECRM_INSTALL_DIR/custom/install.lock || (echo "Failed creating install lock" >&2; exit 4);
+    touch $SUITECRM_INSTALL_DIR/custom/install.lock || (echo "Failed creating install lock" >&2; exit 73);
     echo "Installation ready" >&1
 fi
 
 # Create crontab
 echo '* * * * * /usr/bin/flock -n /var/lock/crm-cron.lockfile "cd /var/www/html;php -f cron.php" > /dev/null 2>&1' >> /tmp/cronfile
-crontab -u www-data /tmp/cronfile || (echo "Failed to create crontab" >&2; exit 5)
+crontab -u www-data /tmp/cronfile || (echo "Failed to create crontab" >&2; exit 70)
 rm /tmp/cronfile
 echo "Crontab set" >&1
 
