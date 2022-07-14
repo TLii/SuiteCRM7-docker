@@ -114,8 +114,10 @@ ENV \
     SUITECRM_SITE_URL=example.com \
     SUITECRM_CONFIG_LOC=${SUITECRM_INSTALL_DIR}/docker-configs
 
-# Install necessary php modules
+# Install modules, clean up and modify values
 RUN apt update && apt -y upgrade; \
+    #
+    # Install dependencies #
     apt -y install \
     cron \
     libzip-dev \
@@ -124,7 +126,12 @@ RUN apt update && apt -y upgrade; \
     libpng-dev \
     libc-client-dev \
     libkrb5-dev \
-    rsync; \
+    rsync \
+    openssl \
+    curl \
+    ; \
+    #
+    # Install php modules #
     docker-php-ext-configure gd --with-freetype --with-jpeg; \
     docker-php-ext-install -j$(nproc) gd; \
     docker-php-ext-configure imap --with-kerberos --with-imap-ssl; \
@@ -132,25 +139,31 @@ RUN apt update && apt -y upgrade; \
     docker-php-ext-install -j$(nproc) mysqli; \
     docker-php-ext-install -j$(nproc) zip; \
     docker-php-ext-install -j$(nproc) bcmath; \
-# Clean up
+    #
+    # Clean up afterwards #
     apt-get -y autoremove; \
     apt-get -y clean; \
     apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
     rm -rf /var/lib/apt/lists/*;    mkdir -p /var/log/suitecrm; \
     ln -sf /dev/stdout /var/log/suitecrm/suitecrm.log; \
-# Modify settings
+    #
+    # Modify settings #
+    #
+    # Use uid and gid of www-data used in nginx image
     usermod -u 101 www-data && groupmod -g 101 www-data; \
+    # Use php production config
     mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"; \
-    mkdir ${SUITECRM_INSTALL_DIR} || echo "Directory /app exists" ;
+    # Make install dir and separate directory for configs. Entrypoint will link them.
+    mkdir ${SUITECRM_INSTALL_DIR} || echo "Installation directory ${SUITECRM_INSTALL_DIR} exists" ; \
+    mkdir /docker-configs && chown www-data:www-data /docker-configs
 
+# Ensure we are installing on a volume
 VOLUME ${SUITECRM_INSTALL_DIR}
-VOLUME ${SUITECRM_INSTALL_DIR}/docker-configs
 
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 COPY --from=final --chown=www-data:www-data /final /usr/src/suitecrm
-COPY --chown=www-data:www-data config_si.php /${SUITECRM_INSTALL_DIR}/docker-configs/
+COPY --chown=www-data:www-data config_si.php /tmp
 
-# Use uid and gid of www-data used in nginx image
 RUN chmod a+x /docker-entrypoint.sh;
 
 WORKDIR ${SUITECRM_INSTALL_DIR}
@@ -199,8 +212,10 @@ ENV \
     SUITECRM_SITE_URL=example.com \
     SUITECRM_CONFIG_LOC=${SUITECRM_INSTALL_DIR}/docker-configs
 
-# Install necessary php modules
+# Install modules, clean up and modify values
 RUN apt update && apt -y upgrade; \
+    #
+    # Install dependencies #
     apt -y install \
     cron \
     libzip-dev \
@@ -213,6 +228,8 @@ RUN apt update && apt -y upgrade; \
     openssl \
     curl \
     ; \
+    #
+    # Install php modules #
     docker-php-ext-configure gd --with-freetype --with-jpeg; \
     docker-php-ext-install -j$(nproc) gd; \
     docker-php-ext-configure imap --with-kerberos --with-imap-ssl; \
@@ -220,24 +237,31 @@ RUN apt update && apt -y upgrade; \
     docker-php-ext-install -j$(nproc) mysqli; \
     docker-php-ext-install -j$(nproc) zip; \
     docker-php-ext-install -j$(nproc) bcmath; \
-    # Clean up
+    #
+    # Clean up afterwards #
     apt-get -y autoremove; \
     apt-get -y clean; \
     apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
     rm -rf /var/lib/apt/lists/*;    mkdir -p /var/log/suitecrm; \
     ln -sf /dev/stdout /var/log/suitecrm/suitecrm.log; \
-    # Modify settings
+    #
+    # Modify settings #
+    #
+    # Use uid and gid of www-data used in nginx image
     usermod -u 101 www-data && groupmod -g 101 www-data; \
+    # Use php production config
     mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"; \
+    # Make install dir and separate directory for configs. Entrypoint will link them.
     mkdir ${SUITECRM_INSTALL_DIR} || echo "Directory /app exists"; \
-    chown www-data:www-data ${SUITECRM_INSTALL_DIR};
+    chown www-data:www-data ${SUITECRM_INSTALL_DIR}; \
+    mkdir /docker-configs && chown www-data:www-data /docker-configs
+
 
 VOLUME ${SUITECRM_INSTALL_DIR}
-VOLUME ${SUITECRM_INSTALL_DIR}/docker-configs
 
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 COPY --from=final --chown=www-data:www-data /final /usr/src/suitecrm
-COPY --chown=www-data:www-data config_si.php /${SUITECRM_INSTALL_DIR}/docker-configs/
+COPY --chown=www-data:www-data config_si.php /tmp
 
 # Use uid and gid of www-data used in nginx image
 RUN chmod a+x /docker-entrypoint.sh;
