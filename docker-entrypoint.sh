@@ -100,7 +100,8 @@ if ([ ! -e /$SUITECRM_INSTALL_DIR/config.php ] && [ ! -e /$SUITECRM_INSTALL_DIR/
 	fi
 	# loop over modular content in the source, and if it already exists in the destination, exclude it
 	for contentPath in \
-		/usr/src/suitecrm/custom/*/* \
+		/usr/src/suitecrm/custom/modules/* \
+		/usr/src/suitecrm/custom/Extension/* \
 		/usr/src/suitecrm/modules/* \
 	; do
 		# Check if contentPath exists
@@ -121,6 +122,8 @@ fi
 # Use install.lock to check if already installed
 if [[ ! -f $SUITECRM_INSTALL_DIR/custom/install.lock ]] && [[ -n $SUITECRM_SILENT_INSTALL ]]; then
     echo "Running silent install..." >&1;
+	# Move silent install configuration to install directory
+	mv /tmp/config_si.php $SUITECRM_INSTALL_DIR/
     php -r "\$_SERVER['HTTP_HOST'] = 'localhost'; \$_SERVER['REQUEST_URI'] = '$SUITECRM_INSTALL_DIR/install.php';\$_REQUEST = array('goto' => 'SilentInstall', 'cli' => true);require_once '$SUITECRM_INSTALL_DIR/install.php';" >&1; 
     touch $SUITECRM_INSTALL_DIR/custom/install.lock || (echo "Failed creating install lock" >&2; exit 73);
     echo "Installation ready" >&1
@@ -129,6 +132,9 @@ elif [[ ! -f $SUITECRM_INSTALL_DIR/custom/install.lock ]] && [[ -n $SUITECRM_UPG
 else
 	echo >&2 "Installation lock is already set, so not installing."
 fi
+
+# If config_si.php was not used, delete it from /tmp
+[[ -f /tmp/config_si.php ]] && rm /tmp/config_si.php
 
 # Create crontab
 echo '* * * * * /usr/bin/flock -n /var/lock/crm-cron.lockfile "cd /var/www/html;php -f cron.php" > /dev/null 2>&1' >> /tmp/cronfile
