@@ -134,7 +134,7 @@ fi
 
 
 # Use install.lock to check if already installed
-if [[ ! -f $SUITECRM_INSTALL_DIR/custom/install.lock ]] && [[ -n $SUITECRM_SILENT_INSTALL ]]; then
+if [[ ! -f $SUITECRM_INSTALL_DIR/custom/install.lock ]]; then
     echo "Running silent install..." >&1;
 	# Move silent install configuration to install directory
 	mv /tmp/config_si.php $SUITECRM_INSTALL_DIR/
