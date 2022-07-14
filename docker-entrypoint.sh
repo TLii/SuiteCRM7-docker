@@ -65,9 +65,8 @@ group=www-data
 		sed -i "s/var\/www\/html/$SUITECRM_INSTALL_DIR/g" /etc/apache2/conf-available/docker-php.conf;
 	fi
 
-([[ -f $SUITECRM_INSTALL_DIR/docker-configs/config.php ]] && [[ ! -f $SUITECRM_INSTALL_DIR/config.php ]]) && ln -s $SUITECRM_INSTALL_DIR/docker-configs/config.php $SUITECRM_INSTALL_DIR/config.php
-([[ -f $SUITECRM_INSTALL_DIR/docker-configs/config_override.php ]] && [[ ! -f $SUITECRM_INSTALL_DIR/config_override.php ]]) && ln -s $SUITECRM_INSTALL_DIR/docker-configs/config_override.php $SUITECRM_INSTALL_DIR/config_override.php
-([[ -f $SUITECRM_INSTALL_DIR/docker-configs/config_si.php ]] && [[ ! -f $SUITECRM_INSTALL_DIR/config.php ]]) && ln -s $SUITECRM_INSTALL_DIR/docker-configs/config_si.php $SUITECRM_INSTALL_DIR/config_si.php
+([[ -f /docker-configs/config.php ]] && [[ ! -f $SUITECRM_INSTALL_DIR/config.php ]]) && ln -s /docker-configs/config.php $SUITECRM_INSTALL_DIR/
+([[ -f /docker-configs/config_override.php ]] && [[ ! -f $SUITECRM_INSTALL_DIR/config_override.php ]]) && ln -s /docker-configs/config_override.php $SUITECRM_INSTALL_DIR/
 
 # Test for existing installation and install as necessary; original code by Docker, Inc, edited by TLii
 if ([ ! -e /$SUITECRM_INSTALL_DIR/config.php ] && [ ! -e /$SUITECRM_INSTALL_DIR/VERSION ]) || [[ -n $SUITECRM_UPGRADE_WITH_IMAGE ]]; then
@@ -80,7 +79,7 @@ if ([ ! -e /$SUITECRM_INSTALL_DIR/config.php ] && [ ! -e /$SUITECRM_INSTALL_DIR/
 	fi
 
 	echo >&2 "SuiteCRM not found in $PWD - copying now..."
-	if [ -n "$(find . -mindepth 1 -maxdepth 1 -not -name docker-configs)" ]; then
+	if [ -n "$(find . -mindepth 1 -maxdepth 1)" ]; then
 		echo >&2 "WARNING: $PWD is not empty! (copying anyhow)"
 	fi
 
