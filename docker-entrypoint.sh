@@ -70,7 +70,7 @@ group=www-data
 ([[ -f $SUITECRM_INSTALL_DIR/docker-configs/config_si.php ]] && [[ ! -f $SUITECRM_INSTALL_DIR/config.php ]]) && ln -s $SUITECRM_INSTALL_DIR/docker-configs/config_si.php $SUITECRM_INSTALL_DIR/config_si.php
 
 # Test for existing installation and install as necessary; original code by Docker, Inc, edited by TLii
-if [ ! -e /$SUITECRM_INSTALL_DIR/config.php ] && [ ! -e /$SUITECRM_INSTALL_DIR/VERSION ]; then
+if ([ ! -e /$SUITECRM_INSTALL_DIR/config.php ] && [ ! -e /$SUITECRM_INSTALL_DIR/VERSION ]) || [[ -n $SUITECRM_UPGRADE_WITH_IMAGE ]]; then
 
     cd "$SUITECRM_INSTALL_DIR"
 
@@ -124,6 +124,10 @@ if [[ ! -f $SUITECRM_INSTALL_DIR/custom/install.lock ]] && [[ -n $SUITECRM_SILEN
     php -r "\$_SERVER['HTTP_HOST'] = 'localhost'; \$_SERVER['REQUEST_URI'] = '$SUITECRM_INSTALL_DIR/install.php';\$_REQUEST = array('goto' => 'SilentInstall', 'cli' => true);require_once '$SUITECRM_INSTALL_DIR/install.php';" >&1; 
     touch $SUITECRM_INSTALL_DIR/custom/install.lock || (echo "Failed creating install lock" >&2; exit 73);
     echo "Installation ready" >&1
+elif [[ ! -f $SUITECRM_INSTALL_DIR/custom/install.lock ]] && [[ -n $SUITECRM_UPGRADE_WITH_IMAGE ]]; then
+	echo >&2 "Modules might have been upgraded. You should run Quick Repair & Rebuild immediately."
+else
+	echo >&2 "Installation lock is already set, so not installing."
 fi
 
 # Create crontab
