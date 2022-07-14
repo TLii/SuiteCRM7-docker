@@ -109,7 +109,7 @@ if ([ ! -e /$SUITECRM_INSTALL_DIR/config.php ] && [ ! -e /$SUITECRM_INSTALL_DIR/
 		# If contentPath exists in source and application directory, exclude it from overwrite
 		contentPath="${contentPath#/usr/src/suitecrm/}"
 		if [ -e "$PWD/$contentPath" ]; then
-			echo >&2 "WARNING: '$PWD/$contentPath' exists. Not overwriting with container version." 
+			echo >&1 "INFO: '$PWD/$contentPath' exists. Updating only with newer content." 
 			#TODO: Make this check if update is in fact newer and patchable.
 			sourceTarArgs+=( --exclude "./$contentPath" )
 		fi
