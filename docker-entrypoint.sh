@@ -61,8 +61,8 @@ group=www-data
 
 # Create necessary apache2 config changes to maintain directory similarities
 	if [[ "$1" == apache2* ]]; then
-		sed -i -e "s/www\.example\.com/$SUITECRM_SITE_URL/g" -e "s/var\/www\/html/$SUITECRM_INSTALL_DIR/g" -e "s/localhost/$SUITECRM_SITE_URL/g" /etc/apache2/sites-enabled/000-default.conf /etc/apache2/sites-available/default-ssl.conf;
-		sed -i "s/var\/www\/html/$SUITECRM_INSTALL_DIR/g" /etc/apache2/conf-available/docker-php.conf;
+		sed -i -e "s|www\.example\.com|$SUITECRM_SITE_URL|g" -e "s|var/www/html|$SUITECRM_INSTALL_DIR|g" -e "s|localhost|$SUITECRM_SITE_URL|g" /etc/apache2/sites-enabled/000-default.conf /etc/apache2/sites-available/default-ssl.conf;
+		sed -i "s|var/www/html|$SUITECRM_INSTALL_DIR|g" /etc/apache2/conf-available/docker-php.conf;
 	fi
 
 ([[ -f /docker-configs/config.php ]] && [[ ! -f $SUITECRM_INSTALL_DIR/config.php ]]) && ln -s /docker-configs/config.php $SUITECRM_INSTALL_DIR/
