@@ -36,6 +36,8 @@ In addition to the mandatory environment variables there are some optional ones:
 ## Helm chart?!
 Not yet, at least.
 
+## Development
+By building with target stage `base-final` you can create a base image that finalizes the source tree, but *does not install* any flavor of PHP. You can c use it as a base image, but have to install, enable etc. all php-related stuff yourself.
 ## License
 This image is licensed under AGPL3.
 
