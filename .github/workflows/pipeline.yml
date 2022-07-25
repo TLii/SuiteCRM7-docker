@@ -98,7 +98,7 @@ jobs:
         # Name of the Docker image
         image: suitecrm7/suitecrm7
         # Tags override for Docker image
-        tags: fpm, fpm-latest, fpm-${{ env.BRANCH }}-latest, fpm-${{ env.BRANCH }}, fpm-${{ env.BUILD_VERSION }}, fpm-${{ env.GITHUB_HASH }},  # optional
+        tags: fpm, fpm-latest, fpm-${{ env.BRANCH }}-latest, fpm-${{ env.BRANCH }}, fpm-${{ env.BUILD_VERSION }}, fpm-${{ env.GITHUB_HASH }}  # optional
         # Target Docker registry
         registry: ${{ secrets.REGISTRY_URL }}
         # Location of Dockerfile, if not Dockerfile in root directory
@@ -114,7 +114,7 @@ jobs:
         # Docker registry password
         password: ${{ secrets.REGISTRY_PASSWORD }} # optional
         # Adds latest tag to auto-generated GitOps tag
-        addLatest: true # optional, default is false
+        addLatest: false # optional, default is false
 
     - name: Build non-master fpm image and push it to Registry
       if: env.BRANCH != 'master'
@@ -168,7 +168,7 @@ jobs:
         # Docker registry password
         password: ${{ secrets.REGISTRY_PASSWORD }} # optional
         # Adds latest tag to auto-generated GitOps tag
-        addLatest: false # optional, default is false
+        addLatest: true # optional, default is false
         
     - name: Build non-master apache2 image and push it to Registry
       if: env.BRANCH != 'master'
