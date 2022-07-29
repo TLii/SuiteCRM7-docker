@@ -32,9 +32,31 @@ jobs:
       run : |
         echo "GITHUB_HASH=$(git rev-parse --short "$GITHUB_SHA")" >> $GITHUB_ENV
         echo SUITECRM_VERSION=$(curl -s -o -  https://raw.githubusercontent.com/salesagility/SuiteCRM/master/suitecrm_version.php | grep suitecrm_version | sed "s|$suitecrm_version.*'\(.*\)';|\1|") >> $GITHUB_ENV
+        if [[ $SUITECRM_VERSION -ne $(cat ./suitecrm_version.txt)]]; then echo "::set-output name=version_changed::true"; echo $SUITECRM_VERSION >> ./suitecrm_version.txt; else echo "::set-output name=version_changed::false"; fi
+
+    - name: Commit changed version number
+      id: commit
+      if: steps.version.outputs.version_changed == 'true'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "github-actions"
+        git 
+        if [-z "$(git status --porcelain)"]; then
+          echo "::set-output name=push::false"
+        else
+          git commit -m "Update SuiteCRM Version number" -a
+          echo "::set-output name=push::true"
+        fi
+      shell: bash
+    - name: Push changes
+      if: steps.commit.outputs.push == 'true'
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+
     - name: Set build version
       run: |
-        echo "BUILD_VERSION=$BRANCH-$GITHUB_RUN_NUMBER" >> $GITHUB_ENV
+        echo "BUILD_VERSION=$BRANCH-$SUITECRM_VERSION-$GITHUB_RUN_NUMBER" >> $GITHUB_ENV
     
     - name: Build master base image and push it to Registry
       if: env.BRANCH == 'master'
