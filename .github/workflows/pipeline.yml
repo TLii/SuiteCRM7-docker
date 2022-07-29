@@ -17,10 +17,6 @@ jobs:
     - name: Check out CODE
       uses: actions/checkout@v2
     
-    - name: Get current commit ID
-      run: |
-        echo "GITHUB_HASH=$(git rev-parse --short "$GITHUB_SHA")" >> $GITHUB_ENV
-      
     - name: Set branch after repo dispatch
       if: github.event_name == 'repository_dispatch'
       run: |
@@ -30,7 +26,12 @@ jobs:
       if: github.event_name != 'repository_dispatch'
       run: |
         echo "BRANCH=$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_ENV
-              
+
+    - name: Set other build variables
+      id: version
+      run : |
+        echo "GITHUB_HASH=$(git rev-parse --short "$GITHUB_SHA")" >> $GITHUB_ENV
+        echo SUITECRM_VERSION=$(curl -s -o -  https://raw.githubusercontent.com/salesagility/SuiteCRM/master/suitecrm_version.php | grep suitecrm_version | sed "s|$suitecrm_version.*'\(.*\)';|\1|") >> $GITHUB_ENV
     - name: Set build version
       run: |
         echo "BUILD_VERSION=$BRANCH-$GITHUB_RUN_NUMBER" >> $GITHUB_ENV
