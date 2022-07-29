@@ -288,7 +288,7 @@ ENV \
     SUITECRM_INSTALL_DIR=/suitecrm \
     SUITECRM_SITE_NAME=SuiteCRM \
     SUITECRM_SITE_URL=example.com \
-    SUITECRM_CONFIG_LOC=${SUITECRM_INSTALL_DIR}/docker-configs
+    SUITECRM_CONFIG_LOC=/docker-configs
 
 # Install modules, clean up and modify values
 RUN apt update && apt -y upgrade; \
@@ -330,7 +330,7 @@ RUN apt update && apt -y upgrade; \
     # Use php production config
     mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"; \
     # Make install dir and separate directory for configs. Entrypoint will link them.
-    mkdir ${SUITECRM_INSTALL_DIR} || echo "Directory /app exists"; \
+    mkdir ${SUITECRM_INSTALL_DIR} || echo "Directory ${SUITECRM_INSTALL_DIR}} exists"; \
     chown www-data:www-data ${SUITECRM_INSTALL_DIR}; \
     mkdir /docker-configs && chown www-data:www-data /docker-configs
 
