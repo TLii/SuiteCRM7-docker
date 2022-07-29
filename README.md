@@ -15,7 +15,7 @@ This repository contains source code of the SuiteCRM 7's unofficial container im
 - `config_si.php` reads values from environment variables instead of hard-coding.
 
 ## Installation and usage
-This image only builds the SuiteCRM application and servers it, depending on your target stage, either with php-fpm or apache2.
+This image only builds the SuiteCRM application and serves it, depending on your target stage, either with php-fpm or apache2.
 
 For apache2 images, you must provide a database and port forwarding. The image only exposes port 80, so it is highly recommended to run a reverse proxy with TLS termination in front of it. 
 
