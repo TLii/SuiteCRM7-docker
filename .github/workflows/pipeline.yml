@@ -48,11 +48,6 @@ jobs:
           echo "::set-output name=push::true"
         fi
       shell: bash
-    - name: Push changes
-      if: steps.commit.outputs.push == 'true'
-      uses: ad-m/github-push-action@master
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Set build version
       run: |
@@ -67,7 +62,7 @@ jobs:
         # Name of the Docker image
         image: suitecrm7/suitecrm7
         # Tags override for Docker image
-        tags: base, base-latest, base-${{ env.BRANCH }}-latest, base-${{ env.BRANCH }}, base-${{ env.BUILD_VERSION }}, base-${{ env.GITHUB_HASH }}  # optional
+        tags: base, base-latest, base-${{ env.BRANCH }}-latest, base-${{ env.BRANCH }}, base-${{ env.BUILD_VERSION }}, base-${{ env.GITHUB_HASH }}, base-${{ SUITECRM_VERSION }}-${{ env.BRANCH }}, base-${{ SUITECRM_VERSION }}  # optional
         # Target Docker registry
         registry: ${{ secrets.REGISTRY_URL }}
         # Location of Dockerfile, if not Dockerfile in root directory
@@ -94,7 +89,7 @@ jobs:
         # Name of the Docker image
         image: suitecrm7/suitecrm7
         # Tags override for Docker image
-        tags: base-${{ env.BRANCH }}-latest, base-${{ env.BRANCH }}, base-${{ env.BUILD_VERSION }}, base-${{ env.GITHUB_HASH }}  # optional
+        tags: base-${{ env.BRANCH }}-latest, base-${{ env.BRANCH }}, base-${{ env.BUILD_VERSION }}, base-${{ env.GITHUB_HASH }}, base-${{ SUITECRM_VERSION }}-${{ env.BRANCH }} # optional
         # Target Docker registry
         registry: ${{ secrets.REGISTRY_URL }}
         # Location of Dockerfile, if not Dockerfile in root directory
@@ -121,7 +116,7 @@ jobs:
         # Name of the Docker image
         image: suitecrm7/suitecrm7
         # Tags override for Docker image
-        tags: fpm, fpm-latest, fpm-${{ env.BRANCH }}-latest, fpm-${{ env.BRANCH }}, fpm-${{ env.BUILD_VERSION }}, fpm-${{ env.GITHUB_HASH }}  # optional
+        tags: fpm, fpm-latest, fpm-${{ env.BRANCH }}-latest, fpm-${{ env.BRANCH }}, fpm-${{ env.BUILD_VERSION }}, fpm-${{ env.GITHUB_HASH }}, $fpm-{{ SUITECRM_VERSION }}, fpm-${{ SUITECRM_VERSION }}-${{ env.BRANCH }}  # optional
         # Target Docker registry
         registry: ${{ secrets.REGISTRY_URL }}
         # Location of Dockerfile, if not Dockerfile in root directory
@@ -148,7 +143,7 @@ jobs:
         # Name of the Docker image
         image: suitecrm7/suitecrm7
         # Tags override for Docker image
-        tags: fpm-${{ env.BRANCH }}-latest, fpm-${{ env.BRANCH }}, fpm-${{ env.BUILD_VERSION }}, fpm-${{ env.GITHUB_HASH }}  # optional
+        tags: fpm-${{ env.BRANCH }}-latest, fpm-${{ env.BRANCH }}, fpm-${{ env.BUILD_VERSION }}, fpm-${{ env.GITHUB_HASH }}, fpm-${{ SUITECRM_VERSION }}-${{ env.BRANCH }}  # optional
         # Target Docker registry
         registry: ${{ secrets.REGISTRY_URL }}
         # Location of Dockerfile, if not Dockerfile in root directory
@@ -175,7 +170,7 @@ jobs:
         # Name of the Docker image
         image: suitecrm7/suitecrm7
         # Tags override for Docker image
-        tags: latest, apache2, apache2-latest, apache2-${{ env.BRANCH }}-latest, apache2-${{ env.BRANCH }}, apache2-${{ env.BUILD_VERSION }}, apache2-${{ env.GITHUB_HASH }}  # optional
+        tags: latest, apache2, apache2-latest, apache2-${{ env.BRANCH }}-latest, apache2-${{ env.BRANCH }}, apache2-${{ env.BUILD_VERSION }}, apache2-${{ env.GITHUB_HASH }}, ${{ SUITECRM_VERSION }}, ${{ SUITECRM_VERSION }}-latest, apache2-${{ SUITECRM_VERSION }}, apache2-${{ SUITECRM_VERSION }}-${{ env.BRANCH }}  # optional
         # Target Docker registry
         registry: ${{ secrets.REGISTRY_URL }}
         # Location of Dockerfile, if not Dockerfile in root directory
@@ -202,7 +197,7 @@ jobs:
         # Name of the Docker image
         image: suitecrm7/suitecrm7
         # Tags override for Docker image
-        tags: apache2-${{ env.BRANCH }}-latest, apache2-${{ env.BRANCH }}, apache2-${{ env.BUILD_VERSION }}, apache2-${{ env.GITHUB_HASH }}  # optional
+        tags: apache2-${{ env.BRANCH }}-latest, apache2-${{ env.BRANCH }}, apache2-${{ env.BUILD_VERSION }}, apache2-${{ env.GITHUB_HASH }}, ${{ SUITECRM_VERSION }}-${{ env.BRANCH }}, apache2-${{ SUITECRM_VERSION }}-${{ env.BRANCH }}  # optional
         # Target Docker registry
         registry: ${{ secrets.REGISTRY_URL }}
         # Location of Dockerfile, if not Dockerfile in root directory
@@ -219,3 +214,33 @@ jobs:
         password: ${{ secrets.REGISTRY_PASSWORD }} # optional
         # Adds latest tag to auto-generated GitOps tag
         addLatest: false # optional, default is false
+
+    - name: Push changed version commit
+      if: steps.commit.outputs.push == 'true'
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Checkout Chart
+      uses: actions/checkout@v3.0.0
+      with: 
+        repository: TLii/SuiteCRM7-chart
+        token: ${{ secrets.PAT }}
+        path: ./chart
+        ref: ${{ env.BRANCH }}
+      
+    - name: Update Chart Versions
+      run: |
+        CHARTVER=$(sed -n  '/^version:.*/p' ./chart/chart/Chart.yaml | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.)
+        sed -i "s/^version:.*/$CHARTVER/" ./chart/chart/Chart.yaml
+        sed -i "s/^appVersion:.*/appVersion: $BUILD_VERSION/" ./chart/chart/Chart.yaml
+        echo "Chart version: $CHARTVER\nApp Version: $BUILD_VERSION"
+        
+    - name: Push Chart
+      run: |
+        cd ./chart
+        git add .
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+        git commit -am "Pipeline/Updated Chart version and App version"
+        git push
