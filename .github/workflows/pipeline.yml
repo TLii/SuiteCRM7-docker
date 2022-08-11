@@ -29,7 +29,7 @@ jobs:
 
     - name: Set other build variables
       id: version
-      run : |
+      run: |
         echo "GITHUB_HASH=$(git rev-parse --short "$GITHUB_SHA")" >> $GITHUB_ENV
         echo "SUITECRM_VERSION=$(curl -s -o -  https://raw.githubusercontent.com/salesagility/SuiteCRM/master/suitecrm_version.php | grep suitecrm_version | sed "s|$suitecrm_version.*'\(.*\)';|\1|")" >> $GITHUB_ENV
         if [[ $SUITECRM_VERSION -ne $(cat ./suitecrm_version.txt) ]]; then echo "::set-output name=version_changed::true"; echo $SUITECRM_VERSION >> ./suitecrm_version.txt; else echo "::set-output name=version_changed::false"; fi
@@ -62,7 +62,7 @@ jobs:
         # Name of the Docker image
         image: suitecrm7/suitecrm7
         # Tags override for Docker image
-        tags: base, base-latest, base-${{ env.BRANCH }}-latest, base-${{ env.BRANCH }}, base-${{ env.BUILD_VERSION }}, base-${{ env.GITHUB_HASH }}, base-${{ SUITECRM_VERSION }}-${{ env.BRANCH }}, base-${{ SUITECRM_VERSION }}  # optional
+        tags: base, base-latest, base-${{ env.BRANCH }}-latest, base-${{ env.BRANCH }}, base-${{ env.BUILD_VERSION }}, base-${{ env.GITHUB_HASH }}, base-${{ env.SUITECRM_VERSION }}-${{ env.BRANCH }}, base-${{ env.SUITECRM_VERSION }}  # optional
         # Target Docker registry
         registry: ${{ secrets.REGISTRY_URL }}
         # Location of Dockerfile, if not Dockerfile in root directory
@@ -89,7 +89,7 @@ jobs:
         # Name of the Docker image
         image: suitecrm7/suitecrm7
         # Tags override for Docker image
-        tags: base-${{ env.BRANCH }}-latest, base-${{ env.BRANCH }}, base-${{ env.BUILD_VERSION }}, base-${{ env.GITHUB_HASH }}, base-${{ SUITECRM_VERSION }}-${{ env.BRANCH }} # optional
+        tags: base-${{ env.BRANCH }}-latest, base-${{ env.BRANCH }}, base-${{ env.BUILD_VERSION }}, base-${{ env.GITHUB_HASH }}, base-${{ env.SUITECRM_VERSION }}-${{ env.BRANCH }} # optional
         # Target Docker registry
         registry: ${{ secrets.REGISTRY_URL }}
         # Location of Dockerfile, if not Dockerfile in root directory
@@ -116,7 +116,7 @@ jobs:
         # Name of the Docker image
         image: suitecrm7/suitecrm7
         # Tags override for Docker image
-        tags: fpm, fpm-latest, fpm-${{ env.BRANCH }}-latest, fpm-${{ env.BRANCH }}, fpm-${{ env.BUILD_VERSION }}, fpm-${{ env.GITHUB_HASH }}, $fpm-{{ SUITECRM_VERSION }}, fpm-${{ SUITECRM_VERSION }}-${{ env.BRANCH }}  # optional
+        tags: fpm, fpm-latest, fpm-${{ env.BRANCH }}-latest, fpm-${{ env.BRANCH }}, fpm-${{ env.BUILD_VERSION }}, fpm-${{ env.GITHUB_HASH }}, $fpm-{{ env.SUITECRM_VERSION }}, fpm-${{ env.SUITECRM_VERSION }}-${{ env.BRANCH }}  # optional
         # Target Docker registry
         registry: ${{ secrets.REGISTRY_URL }}
         # Location of Dockerfile, if not Dockerfile in root directory
@@ -143,7 +143,7 @@ jobs:
         # Name of the Docker image
         image: suitecrm7/suitecrm7
         # Tags override for Docker image
-        tags: fpm-${{ env.BRANCH }}-latest, fpm-${{ env.BRANCH }}, fpm-${{ env.BUILD_VERSION }}, fpm-${{ env.GITHUB_HASH }}, fpm-${{ SUITECRM_VERSION }}-${{ env.BRANCH }}  # optional
+        tags: fpm-${{ env.BRANCH }}-latest, fpm-${{ env.BRANCH }}, fpm-${{ env.BUILD_VERSION }}, fpm-${{ env.GITHUB_HASH }}, fpm-${{ env.SUITECRM_VERSION }}-${{ env.BRANCH }}  # optional
         # Target Docker registry
         registry: ${{ secrets.REGISTRY_URL }}
         # Location of Dockerfile, if not Dockerfile in root directory
@@ -170,7 +170,7 @@ jobs:
         # Name of the Docker image
         image: suitecrm7/suitecrm7
         # Tags override for Docker image
-        tags: latest, apache2, apache2-latest, apache2-${{ env.BRANCH }}-latest, apache2-${{ env.BRANCH }}, apache2-${{ env.BUILD_VERSION }}, apache2-${{ env.GITHUB_HASH }}, ${{ SUITECRM_VERSION }}, ${{ SUITECRM_VERSION }}-latest, apache2-${{ SUITECRM_VERSION }}, apache2-${{ SUITECRM_VERSION }}-${{ env.BRANCH }}  # optional
+        tags: latest, apache2, apache2-latest, apache2-${{ env.BRANCH }}-latest, apache2-${{ env.BRANCH }}, apache2-${{ env.BUILD_VERSION }}, apache2-${{ env.GITHUB_HASH }}, ${{ env.SUITECRM_VERSION }}, ${{ env.SUITECRM_VERSION }}-latest, apache2-${{ env.SUITECRM_VERSION }}, apache2-${{ env.SUITECRM_VERSION }}-${{ env.BRANCH }}  # optional
         # Target Docker registry
         registry: ${{ secrets.REGISTRY_URL }}
         # Location of Dockerfile, if not Dockerfile in root directory
@@ -197,7 +197,7 @@ jobs:
         # Name of the Docker image
         image: suitecrm7/suitecrm7
         # Tags override for Docker image
-        tags: apache2-${{ env.BRANCH }}-latest, apache2-${{ env.BRANCH }}, apache2-${{ env.BUILD_VERSION }}, apache2-${{ env.GITHUB_HASH }}, ${{ SUITECRM_VERSION }}-${{ env.BRANCH }}, apache2-${{ SUITECRM_VERSION }}-${{ env.BRANCH }}  # optional
+        tags: apache2-${{ env.BRANCH }}-latest, apache2-${{ env.BRANCH }}, apache2-${{ env.BUILD_VERSION }}, apache2-${{ env.GITHUB_HASH }}, ${{ env.SUITECRM_VERSION }}-${{ env.BRANCH }}, apache2-${{ env.SUITECRM_VERSION }}-${{ env.BRANCH }}  # optional
         # Target Docker registry
         registry: ${{ secrets.REGISTRY_URL }}
         # Location of Dockerfile, if not Dockerfile in root directory
