@@ -31,8 +31,8 @@ jobs:
       id: version
       run : |
         echo "GITHUB_HASH=$(git rev-parse --short "$GITHUB_SHA")" >> $GITHUB_ENV
-        echo SUITECRM_VERSION=$(curl -s -o -  https://raw.githubusercontent.com/salesagility/SuiteCRM/master/suitecrm_version.php | grep suitecrm_version | sed "s|$suitecrm_version.*'\(.*\)';|\1|") >> $GITHUB_ENV
-        if [[ $SUITECRM_VERSION -ne $(cat ./suitecrm_version.txt)]]; then echo "::set-output name=version_changed::true"; echo $SUITECRM_VERSION >> ./suitecrm_version.txt; else echo "::set-output name=version_changed::false"; fi
+        echo "SUITECRM_VERSION=$(curl -s -o -  https://raw.githubusercontent.com/salesagility/SuiteCRM/master/suitecrm_version.php | grep suitecrm_version | sed "s|$suitecrm_version.*'\(.*\)';|\1|")" >> $GITHUB_ENV
+        if [[ $SUITECRM_VERSION -ne $(cat ./suitecrm_version.txt) ]]; then echo "::set-output name=version_changed::true"; echo $SUITECRM_VERSION >> ./suitecrm_version.txt; else echo "::set-output name=version_changed::false"; fi
 
     - name: Commit changed version number
       id: commit
@@ -220,7 +220,7 @@ jobs:
       uses: ad-m/github-push-action@master
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        
+
     - name: Checkout Chart
       uses: actions/checkout@v3.0.0
       with: 
