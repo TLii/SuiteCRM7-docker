@@ -40,7 +40,7 @@ jobs:
       run: |
         git config --local user.email "github-actions@github.com"
         git config --local user.name "github-actions"
-        git 
+        git commit -am "Version bump"
         if [-z "$(git status --porcelain)"]; then
           echo "::set-output name=push::false"
         else
