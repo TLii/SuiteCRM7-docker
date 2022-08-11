@@ -72,7 +72,6 @@ RUN mv /build /final
 # Copy processed artifacts to final image
 COPY --from=build-php /build/vendor /final/vendor
 
-
 # Build an image that can be used as base image for further development
 FROM debian:bullseye-slim as base-final
 ENV \
