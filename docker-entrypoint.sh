@@ -130,9 +130,6 @@ if ([ ! -e /$SUITECRM_INSTALL_DIR/config.php ] && [ ! -e /$SUITECRM_INSTALL_DIR/
 	echo >&2 "Complete! SuiteCRM has been successfully copied to $PWD"
 fi
 
-
-
-
 # Use install.lock to check if already installed
 if [[ ! -f $SUITECRM_INSTALL_DIR/custom/install.lock ]]; then
     echo "Running silent install..." >&1;
