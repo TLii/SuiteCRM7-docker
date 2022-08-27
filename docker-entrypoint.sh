@@ -65,8 +65,8 @@ group=www-data
 		sed -i "s|var/www/html|$SUITECRM_INSTALL_DIR|g" /etc/apache2/conf-available/docker-php.conf;
 	fi
 
-([[ -f /docker-configs/config.php ]] && [[ ! -f $SUITECRM_INSTALL_DIR/config.php ]]) && ln -s /docker-configs/config.php $SUITECRM_INSTALL_DIR/
-([[ -f /docker-configs/config_override.php ]] && [[ ! -f $SUITECRM_INSTALL_DIR/config_override.php ]]) && ln -s /docker-configs/config_override.php $SUITECRM_INSTALL_DIR/
+([[ -f $SUITECRM_CONFIG_LOC/config.php ]] && [[ ! -f $SUITECRM_INSTALL_DIR/config.php ]]) && ln -s SUITECRM_CONFIG_LOC/config.php $SUITECRM_INSTALL_DIR/
+([[ -f SUITECRM_CONFIG_LOC/config_override.php ]] && [[ ! -f $SUITECRM_INSTALL_DIR/config_override.php ]]) && ln -s SUITECRM_CONFIG_LOC/config_override.php $SUITECRM_INSTALL_DIR/
 
 # Test for existing installation and install as necessary; original code by Docker, Inc, edited by TLii
 if ([ ! -e /$SUITECRM_INSTALL_DIR/config.php ] && [ ! -e /$SUITECRM_INSTALL_DIR/VERSION ]) || [[ -n $SUITECRM_UPGRADE_WITH_IMAGE ]]; then
