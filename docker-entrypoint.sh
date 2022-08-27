@@ -151,10 +151,14 @@ fi
 [[ -f /tmp/config_si.php ]] && rm /tmp/config_si.php
 
 # Create crontab
-echo '* * * * * /usr/bin/flock -n /var/lock/crm-cron.lockfile "cd /var/www/html;php -f cron.php" > /dev/null 2>&1' >> /tmp/cronfile
-crontab -u www-data /tmp/cronfile || (echo "Failed to create crontab" >&2; exit 70)
-rm /tmp/cronfile
-echo "Crontab set" >&1
+if [[ -n $CRONTAB_ENABLED ]]; then
+	echo '* * * * * /usr/bin/flock -n /var/lock/crm-cron.lockfile "cd $SUITECRM_INSTALL_DIR;php -f cron.php" > /dev/null 2>&1' >> /tmp/cronfile
+	crontab -u www-data /tmp/cronfile || (echo "Failed to create crontab" >&2; exit 70)
+	rm /tmp/cronfile
+	echo "Crontab set" >&1
+else
+	echo "Crontab is not set, please use an external crontab, e.g. a webcron service, to run $SUITECRM_INSTALL_DIR/cron.php at every minute."
+fi
 
 
 # Wrap up with executing correct process with correct arguments
