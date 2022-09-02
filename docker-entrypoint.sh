@@ -20,7 +20,7 @@
 # Partially derived from Docker Hub's official images; 
 # Copyright 2014 Docker, Inc.set -e
 
-set -Eeuo pipefail
+set -Eeo pipefail
 
 user=www-data
 group=www-data
@@ -148,7 +148,7 @@ fi
 [[ -f /tmp/config_si.php ]] && rm /tmp/config_si.php
 
 # Create crontab
-if [[ -n $CRONTAB_ENABLED ]]; then
+if [[ -n $SUITECRM_CRONTAB_ENABLED ]]; then
 	echo '* * * * * /usr/bin/flock -n /var/lock/crm-cron.lockfile "cd $SUITECRM_INSTALL_DIR;php -f cron.php" > /dev/null 2>&1' >> /tmp/cronfile
 	crontab -u www-data /tmp/cronfile || (echo "Failed to create crontab" >&2; exit 70)
 	rm /tmp/cronfile

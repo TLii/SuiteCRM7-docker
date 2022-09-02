@@ -106,7 +106,8 @@ ENV \
     SUITECRM_INSTALL_DIR=/suitecrm \
     SUITECRM_SITE_NAME=SuiteCRM \
     SUITECRM_SITE_URL=example.com \
-    SUITECRM_CONFIG_LOC=/docker-configs
+    SUITECRM_CONFIG_LOC=/docker-configs \
+    SUITECRM_CRONTAB_ENABLED=yes
 
 # Install modules, clean up and modify values
 RUN apt update && apt -y upgrade; \
