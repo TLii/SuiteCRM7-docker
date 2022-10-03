@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+
+check_app_variables() {
+# Test for necessary environment variables and exit if missing crucial ones.
+	[[ -z $SUITECRM_DATABASE_NAME ]] && (echo "ERROR: you need to set SUITECRM_DATABASE_NAME to continue"; exit 78)
+	[[ -z $SUITECRM_DATABASE_USER ]] && (echo "ERROR: you need to set SUITECRM_DATABASE_USER to continue"; exit 78)
+	[[ -z $SUITECRM_DATABASE_PASSWORD ]] && (echo "ERROR: you need to set SUITECRM_DATABASE_PASSWORD to continue"; exit 78)
+	[[ -z $SUITECRM_DATABASE_HOST ]] && (echo "ERROR: you need to set SUITECRM_DATABASE_HOST to continue"; exit 78)
+	[[ -z $SUITECRM_SITE_URL ]] && (echo "ERROR: you need to set SUITECRM_SITE_URL to continue"; exit 78)
+}
+
+set_apache_config() {
+# Create necessary apache2 config changes to maintain directory similarities
+	if [[ "$1" == apache2* ]]; then
+		sed -i -e "s|www\.example\.com|$SUITECRM_SITE_URL|g" -e "s|var/www/html|$SUITECRM_INSTALL_DIR|g" -e "s|localhost|$SUITECRM_SITE_URL|g" /etc/apache2/sites-enabled/000-default.conf /etc/apache2/sites-available/default-ssl.conf;
+		sed -i "s|var/www/html|$SUITECRM_INSTALL_DIR|g" /etc/apache2/conf-available/docker-php.conf;
+	fi
+}
+
+check_suitecrm_config() {
+	[[ -f "$SUITECRM_CONFIG_LOC/config.php" ]] && [[ ! -f "$SUITECRM_INSTALL_DIR/config.php" ]] && ln -s "$SUITECRM_CONFIG_LOC/config.php" "$SUITECRM_INSTALL_DIR/"
+	[[ -f "$SUITECRM_CONFIG_LOC/config_override.php" ]] && [[ ! -f "$SUITECRM_INSTALL_DIR/config_override.php" ]] && ln -s "$SUITECRM_CONFIG_LOC/config_override.php" "$SUITECRM_INSTALL_DIR/"
+}
+
+copy_files() {
+	cd "$SUITECRM_INSTALL_DIR" || exit 1
+
+    # Correct permissions if necessary
+	if [ "$uid" = '0' ] && [ "$(stat -c '%u:%g' .)" = '0:0' ]; then
+		chown "$user:$group" .
+	fi
+
+	echo >&2 "SuiteCRM not found in $PWD - copying now..."
+	if [ -n "$(find . -mindepth 1 -maxdepth 1)" ]; then
+		echo >&2 "WARNING: $PWD is not empty! (copying anyhow)"
+	fi
+
+	sourceTarArgs=(
+		--create
+		--file -
+		--directory /usr/src/suitecrm
+		--owner "$user" --group "$group"
+	)
+	targetTarArgs=(
+		--extract
+		--file -
+	)
+	if [ "$uid" != '0' ]; then
+		# avoid "tar: .: Cannot utime: Operation not permitted" and "tar: .: Cannot change mode to rwxr-xr-x: Operation not permitted"
+		targetTarArgs+=( --no-overwrite-dir )
+	fi
+	# loop over modular content in the source, and if it already exists in the destination, exclude it
+	for contentPath in \
+		/usr/src/suitecrm/custom/modules/* \
+		/usr/src/suitecrm/custom/Extension/* \
+		/usr/src/suitecrm/modules/* \
+	; do
+		# Check if contentPath exists. Only non-existing files will be copied.
+		contentPath="${contentPath%/}"
+		[ -e "$contentPath" ] || continue
+		# If contentPath exists in source and application directory, exclude it from overwrite
+		contentPath="${contentPath#/usr/src/suitecrm/}"
+		if [ -e "$PWD/$contentPath" ]; then
+			echo >&1 "INFO: '$PWD/$contentPath' exists. Updating only with newer content." 
+			sourceTarArgs+=( --exclude "./$contentPath" )
+		fi
+	done
+
+	tar "${sourceTarArgs[@]}" . | tar "${targetTarArgs[@]}"
+	echo >&2 "Copying complete. Now updating modules..."
+	echo >&2 "Complete! SuiteCRM has been successfully copied to $PWD"
+}
+
+update_modules() {
+	modules_updated=0
+	# See if modules need updating; save backups to <install_dir>/upload/docker-upgrade-backups/
+	mkdir -p "$PWD"/upload/docker-upgrade-backups
+	for modulePath in \
+		/usr/src/suitecrm/custom/modules/* \
+		/usr/src/suitecrm/modules/* \
+	; do
+		modulePath="${modulePath#/usr/src/suitecrm/}"
+		## Ignore all with /ext/, but not custom/Extension/*/Ext/. Kudos @pgr!
+		rsync -q -r -b -t -u --backup-dir="$PWD"/upload/docker-upgrade-backups --update --exclude "$modulePath"/ext/* --exclude "$modulePath"/*/ext/* /usr/src/suitecrm/"$modulePath" "$PWD"/"$modulePath"
+		modules_updated=1
+		echo "$modulePath" has been updated; backup has been saved in "$PWD"/upload/docker-upgrade-backups
+	done
+	if [[ modules_updated -eq 1 ]]; then 
+		unset modules_updated
+		return 1
+	fi
+}
+
+suitecrm_install() {
+	# Move silent install configuration to install directory
+	mv fs/opt/suitecrm/templates/config_si.php "$SUITECRM_INSTALL_DIR"/
+    php -r "\$_SERVER['HTTP_HOST'] = 'localhost'; \$_SERVER['REQUEST_URI'] = '$SUITECRM_INSTALL_DIR/install.php';\$_REQUEST = array('goto' => 'SilentInstall', 'cli' => true);require_once '$SUITECRM_INSTALL_DIR/install.php';" >&1; 
+    touch "$SUITECRM_INSTALL_DIR"/custom/install.lock || (echo "Failed creating install lock" >&2; exit 73);
+	chown www-data:www-data "$SUITECRM_INSTALL_DIR"/custom/install.lock
+    echo "Installation ready" >&1
+}
+suitecrm_rebuild() {
+	if  [ "$EUID" -eq 0 ]; then
+        su -l www-data -s /bin/bash -c "php /opt/suitecrm/repair.php"
+    else
+        php /opt/suitecrm/repair.php
+    fi 
+}
+
+suitecrm_install_cleanup() {
+	# If config_si.php was not used, delete it from /tmp
+	[[ -f fs/opt/suitecrm/templates/config_si.php ]] && rm fs/opt/suitecrm/templates/config_si.php
+	[[ -f /tmp/cronfile ]] && rm /tmp/cronfile
+}
+
+suitecrm_create_crontab() {
+	echo '* * * * * /usr/bin/flock -n /var/lock/crm-cron.lockfile "cd $SUITECRM_INSTALL_DIR;php -f cron.php" > /dev/null 2>&1' >> /tmp/cronfile
+	crontab -u www-data /tmp/cronfile && return 1
+}

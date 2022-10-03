@@ -144,11 +144,10 @@ RUN apt update && apt -y upgrade; \
     VOLUME ${SUITECRM_INSTALL_DIR}
 
     # Copy data for final image
-    COPY docker-entrypoint.sh /docker-entrypoint.sh
-    COPY --from=final --chown=www-data:www-data /final /usr/src/suitecrm
-    COPY --chown=www-data:www-data config_si.php /tmp
+COPY fs/* /
+COPY --from=final --chown=www-data:www-data /final /usr/src/suitecrm
 
-    RUN chmod a+x /docker-entrypoint.sh;
+RUN chmod a+x /docker-entrypoint.sh; chmod a+rx /opt/*/*.sh;
 
     WORKDIR ${SUITECRM_INSTALL_DIR}
 
@@ -238,9 +237,8 @@ RUN apt update && apt -y upgrade; \
 # Ensure we are installing on a volume
 VOLUME ${SUITECRM_INSTALL_DIR}
 
-COPY docker-entrypoint.sh /docker-entrypoint.sh
+COPY fs/* /
 COPY --from=final --chown=www-data:www-data /final /usr/src/suitecrm
-COPY --chown=www-data:www-data config_si.php /tmp
 
 RUN chmod a+x /docker-entrypoint.sh;
 
@@ -335,9 +333,8 @@ RUN apt update && apt -y upgrade; \
 
 VOLUME ${SUITECRM_INSTALL_DIR}
 
-COPY docker-entrypoint.sh /docker-entrypoint.sh
+COPY fs/* /
 COPY --from=final --chown=www-data:www-data /final /usr/src/suitecrm
-COPY --chown=www-data:www-data config_si.php /tmp
 
 # Use uid and gid of www-data used in nginx image
 RUN chmod a+x /docker-entrypoint.sh;
