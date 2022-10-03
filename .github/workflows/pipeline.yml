@@ -8,7 +8,11 @@ on:
   workflow_dispatch:
   repository_dispatch:
     types: [parent_changed]
-    
+
+concurrency: 
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+  
 jobs:
   build:
     runs-on: ubuntu-latest
