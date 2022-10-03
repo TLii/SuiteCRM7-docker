@@ -141,15 +141,15 @@ RUN apt update && apt -y upgrade; \
     mkdir /docker-configs && chown www-data:www-data /docker-configs
 
     # Ensure we are installing on a volume
-    VOLUME ${SUITECRM_INSTALL_DIR}
+VOLUME ${SUITECRM_INSTALL_DIR}
 
-    # Copy data for final image
+# Copy data for final image
 COPY fs/* /
 COPY --from=final --chown=www-data:www-data /final /usr/src/suitecrm
 
 RUN chmod a+x /docker-entrypoint.sh; chmod a+rx /opt/*/*.sh;
 
-    WORKDIR ${SUITECRM_INSTALL_DIR}
+WORKDIR ${SUITECRM_INSTALL_DIR}
 
 # Run final image with php-fpm
 FROM php:fpm AS serve-php-fpm
