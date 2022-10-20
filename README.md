@@ -1,11 +1,11 @@
-# SuiteCRM 7 image
+# SuiteCRM 7 image by tlii
 ## General information
 
 **This is an unnaffiliated project without links or input from *SalesAgility Inc*, which holds trademarked rights to the SuiteCRM brand.**
 
 This repository contains source code of the SuiteCRM 7's unofficial container image. The image is built from the official [upstream source code](https://github.com/salesagility/SuiteCRM). There are minor replacements to the official source code to make it more container-friendly (see below).
 
-**There is no guaranteed support.**  If you don't know how to run this or break it while running, you get to keep the pieces. I'm only running this since an official SuiteCRM container doesn't exist and can't really offer support.
+**There is no guaranteed support.**  If you don't know how to run this or break it while running, you get to keep the pieces. I'm developing this primarily for my own use, but if anyone finds it useful, go for it. If you notice issues, feel free to file an issue.
 
 **This is still very much experimental, and might break at any point.** Contributions are welcome, but might ultimately not get included. I'm trying to keep the application as close to upstream source as possible and only replace or add to the codebase at container level if necessary for configuring the container. If you want to make more changes, I suggest using this as parent image.
 
@@ -38,6 +38,7 @@ Not yet, at least.
 
 ## Development
 By building with target stage `base-final` you can create a base image that finalizes the source tree, but *does not install* any flavor of PHP. You can use it as a base image, but have to install, enable etc. all php-related stuff yourself.
+
 ## License
 This image is licensed under AGPL3.
 
@@ -47,6 +48,6 @@ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
 
 You should have received a copy of the GNU Affero General Public License along with this program.  If not, see <https://www.gnu.org/licenses/>.  
 
- SugarCRM Community Edition is a customer relationship management program developed by SugarCRM, Inc. Copyright (C) 2004-2013 SugarCRM Inc.
- 
- SuiteCRM 7 is an extension to SugarCRM Community Edition developed by SalesAgility Ltd. Copyright (C) 2011 - 2022 SalesAgility Ltd.
+	SugarCRM Community Edition is a customer relationship management program developed by SugarCRM, Inc. Copyright (C) 2004-2013 SugarCRM Inc.
+
+	SuiteCRM 7 is an extension to SugarCRM Community Edition developed by SalesAgility Ltd. Copyright (C) 2011 - 2022 SalesAgility Ltd.
