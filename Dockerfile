@@ -226,8 +226,8 @@ RUN apt update && apt -y upgrade; \
     #
     # Modify settings #
     #
-    # Use uid and gid of www-data used in nginx image
-    usermod -u 101 www-data && groupmod -g 101 www-data; \
+    # Use uid and gid of www-data used in nginx image while removing conflicting username
+    userdel Debian-exim && usermod -u 101 www-data && groupmod -g 101 www-data; \
     # Use php production config
     mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"; \
     # Make install dir and separate directory for configs. Entrypoint will link them.
