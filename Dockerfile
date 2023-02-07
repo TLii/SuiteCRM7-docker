@@ -336,7 +336,6 @@ VOLUME ${SUITECRM_INSTALL_DIR}
 COPY fs /
 COPY --from=final --chown=www-data:www-data /final /usr/src/suitecrm
 
-# Use uid and gid of www-data used in nginx image
 RUN chmod a+x /docker-entrypoint.sh;
 
 WORKDIR ${SUITECRM_INSTALL_DIR}
