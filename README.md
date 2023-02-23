@@ -17,21 +17,37 @@ This repository contains source code of the SuiteCRM 7's unofficial container im
 ## Installation and usage
 This image only builds the SuiteCRM application and serves it, depending on your target stage, either with php-fpm or apache2.
 
-For apache2 images, you must provide a database and port forwarding. The image only exposes port 80, so it is highly recommended to run a reverse proxy with TLS termination in front of it. 
+For apache2 images, you must provide a database and port forwarding. The image only exposes port 80, so it is highly recommended to run a reverse proxy with TLS termination in front of it.
 
 For php-fpm images, this image will provide php-fpm and the app filesystem. In addition to external database, you need to configure a web server with pass-through of php to the fpm of this container.
 
 You **must** provide the image with the following environment variables:
 
-	DATABASE_NAME: The name of database in the external db server.
-	DATABASE_USER: The username on the external db server.
-	DATABASE_PASSWORD: The password for the external db server.
-	DATABASE_SERVER: The hostname for the external db server.
-	SUITECRM_SITEURL: The URL to access the application.
+- DATABASE_NAME: The name of database in the external db server.
+- DATABASE_USER: The username on the external db server.
+- DATABASE_PASSWORD: The password for the external db server.
+- DATABASE_SERVER: The hostname for the external db server.
+- SUITECRM_SITEURL: The URL to access the application.
 
 In addition to the mandatory environment variables there are some optional ones:
-    SUITECRM_INSTALL_DIR: You can change install location, but you probably shouldn't.
-    SUITECRM_UPGRADE_WITH_IMAGE: If set to any non-null value, the codebase is updated each time the image starts. This is useful for automatic updates. *Warning*: At this point Quick Repair & Rebuild is not run automatically, so this setting is usually not recommended.
+- SUITECRM_INSTALL_DIR: *Not recommended.* You can change install location, but you probably shouldn't.
+- SUITECRM_IGNORE_VERSION: Unless set to any non-null value, the codebase is updated each time the image starts. This is useful for automatic updates. If you intend to upgrade with admin tools, set this to any value (apart from `null`).
+- SUITECRM_MANUAL_INSTALL: If set to any non-null value, silent installer (automatic install) is not run, and you must install manually.
+- SUITECRM_MANUAL_UPGRADE: *Not recommended.* If set to any non-null value, updates are not *applied* automatically (ie. Quick Repair and Rebuild is not run). Might be useful for debugging.
+
+## Adding own scripts
+The container setup runs in three (or four, if you count entrypoint) stages:
+1. `init` - Initialization before the app is set up.
+2. `setup` - Setting up the app itself.
+3. `finish` - Cleanup and other finalizing tasks.
+4. `entrypoint` - The container entrypoint.
+
+You can add your own scripts to run in `init`, `setup` and `finish` stages and, if you wish, override the entrypoint altogether.
+
+There are two built-in ways to add scripts to the first three stages. First, you can either place script files to `/fs/opt/custom_scripts/[init|setup|finish]`. All `.sh` files in those directories will be run consecutively.
+If you want more control over the flow, you can use an object-oriented approach, place files under `/fs/opt/lib` (these files *must* contain no procedural code!), and use functions `trigger_custom_init()` `trigger_custom_setup()` and `trigger_custom_finish()` to trigger their run.
+
+If you want to override the default entrypoint, you can do so with `custom_entrypoint()`. Note: if `custom_entrypoint()` exists, *it will completely override* the default entrypoint.
 
 ## Helm chart?!
 Not yet, at least.
@@ -46,7 +62,7 @@ This program is free software: you can redistribute it and/or modify it under th
 
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more details.
 
-You should have received a copy of the GNU Affero General Public License along with this program.  If not, see <https://www.gnu.org/licenses/>.  
+You should have received a copy of the GNU Affero General Public License along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 	SugarCRM Community Edition is a customer relationship management program developed by SugarCRM, Inc. Copyright (C) 2004-2013 SugarCRM Inc.
 
