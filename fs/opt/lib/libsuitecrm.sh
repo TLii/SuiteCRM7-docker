@@ -45,11 +45,14 @@ test_and_copy() {
 }
 
 check_suitecrm_config() {
+	# @ prepare_app
+	# Check if config.php and config_override.php are locally in installation directory or in external location, and if latter, link them. Local files take precedence over linking.
 	[[ -f "$SUITECRM_CONFIG_LOC/config.php" ]] && [[ ! -f "$SUITECRM_INSTALL_DIR/config.php" ]] && ln -s "$SUITECRM_CONFIG_LOC/config.php" "$SUITECRM_INSTALL_DIR/"
 	[[ -f "$SUITECRM_CONFIG_LOC/config_override.php" ]] && [[ ! -f "$SUITECRM_INSTALL_DIR/config_override.php" ]] && ln -s "$SUITECRM_CONFIG_LOC/config_override.php" "$SUITECRM_INSTALL_DIR/"
 }
 
 copy_files() {
+	# Ref: test_and_copy()
 	cd "$SUITECRM_INSTALL_DIR" || exit 1
 
     # Correct permissions if necessary
@@ -99,9 +102,10 @@ copy_files() {
 }
 
 update_modules() {
+	# Ref: test_and_copy()
 	modules_updated=0
 	# See if modules need updating; save backups to <install_dir>/upload/docker-upgrade-backups/
-	mkdir -p "$PWD"/upload/docker-upgrade-backups
+	mkdir -p "$PWD"/upload/docker-upgrade-backups/"$(date +%Y%m%d)"
 	for modulePath in \
 		/usr/src/suitecrm/custom/modules/* \
 		/usr/src/suitecrm/modules/* \
@@ -110,7 +114,7 @@ update_modules() {
 		## Ignore all with /ext/, but not custom/Extension/*/Ext/. Kudos @pgr!
 		rsync -q -r -b -t -u --backup-dir="$PWD"/upload/docker-upgrade-backups --update --exclude "$modulePath"/ext/* --exclude "$modulePath"/*/ext/* /usr/src/suitecrm/"$modulePath" "$PWD"/"$modulePath"
 		modules_updated=1
-		echo "$modulePath" has been updated; backup has been saved in "$PWD"/upload/docker-upgrade-backups
+		echo "$modulePath" has been updated, and backup has been saved in "$PWD"/upload/docker-upgrade-backups/"$(date +%Y%m%d)"
 	done
 	if [[ modules_updated -eq 1 ]]; then
 		unset modules_updated
@@ -119,6 +123,7 @@ update_modules() {
 }
 
 suitecrm_install() {
+	# Ref: test_and_copy()
 	# Move silent install configuration to install directory
 	mv fs/opt/suitecrm/templates/config_si.php "$SUITECRM_INSTALL_DIR"/
     php -r "\$_SERVER['HTTP_HOST'] = 'localhost'; \$_SERVER['REQUEST_URI'] = '$SUITECRM_INSTALL_DIR/install.php';\$_REQUEST = array('goto' => 'SilentInstall', 'cli' => true);require_once '$SUITECRM_INSTALL_DIR/install.php';" >&1;
@@ -126,7 +131,10 @@ suitecrm_install() {
 	chown www-data:www-data "$SUITECRM_INSTALL_DIR"/custom/install.lock
     echo "Installation ready" >&1
 }
+
 suitecrm_rebuild() {
+	# Ref: test_and_copy()
+	# Run Quick Repair and Rebuild
 	if  [ "$EUID" -eq 0 ]; then
         su -l www-data -s /bin/bash -c "php /opt/suitecrm/repair.php"
     else
@@ -135,12 +143,26 @@ suitecrm_rebuild() {
 }
 
 suitecrm_install_cleanup() {
-	# If config_si.php was not used, delete it from /tmp
+	# @finish_cleanup()
+	# Clean up afterwards
 	[[ -f fs/opt/suitecrm/templates/config_si.php ]] && rm fs/opt/suitecrm/templates/config_si.php
 	[[ -f /tmp/cronfile ]] && rm /tmp/cronfile
+
+}
+
+suitecrm_setup_crontab() {
+	# @finish_app_setup()
+	# Create crontab if configured
+  if [[ -n $SUITECRM_CRONTAB_ENABLED ]]; then
+    suitecrm_create_crontab || (echo "Failed to create crontab" >&2; exit 70)
+    echo "Crontab set" >&1
+  else
+    echo >&2 "Crontab is not set, please use an external crontab, e.g. a webcron service, to run $SUITECRM_INSTALL_DIR/cron.php at every minute."
+  fi
 }
 
 suitecrm_create_crontab() {
+	# Ref: suitecrm_setup_crontab()
 	echo '* * * * * /usr/bin/flock -n /var/lock/crm-cron.lockfile "cd $SUITECRM_INSTALL_DIR;php -f cron.php" > /dev/null 2>&1' >> /tmp/cronfile
 	crontab -u www-data /tmp/cronfile && return 1
 }

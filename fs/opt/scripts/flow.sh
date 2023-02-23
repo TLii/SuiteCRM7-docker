@@ -74,7 +74,7 @@ run_entrypoint() {
         # If there are scripts under /opt/custom_scripts/entrypoint, run them.
         # Note: results are unpredictable, if there are multiple files in the
         # directory.
-        for sc in /opt/custom_scripts/entrypoint/*; do bash $sc; done
+        for sc in /opt/custom_scripts/entrypoint/*; do bash "$sc"; done
     elif [[ $(type -t custom_entrypoint) == function ]]; then
         # If set, run custom_entrypoint(), otherwise run default app_entrypoint().
         custom_entrypoint "$@"
