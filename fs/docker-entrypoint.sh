@@ -17,51 +17,19 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-# Partially derived from Docker Hub's official images; 
+# Partially derived from Docker Hub's official images;
 # Copyright 2014 Docker, Inc.set -e
 
 set -Eeo pipefail
 
-export user=www-data
-export group=www-data
-
-for sc in /opt/scripts/*.sh; do $sc; done
 for sc in /opt/lib/*.sh; do $sc; done
-
-check_app_variables
-
-setup_php_user
-
-set_apache_config
-
-check_suitecrm_config
-
-# Test for existing installation and install as necessary
-if [ ! -e "/$SUITECRM_INSTALL_DIR/config.php" ] && [ ! -e "/$SUITECRM_INSTALL_DIR/VERSION" ]; then
-    copy_files
-elif [[ -n $SUITECRM_UPGRADE_WITH_IMAGE ]]; then
-	copy_files
-	update_modules && rebuild_needed=1
-fi
-
-# Use install.lock to check if already installed
-if [[ ! -f $SUITECRM_INSTALL_DIR/custom/install.lock ]]; then
-	echo "Running silent install..." >&1;
-	suitecrm_install
-elif [[ rebuild_needed -eq 1 ]] ; then
-	echo >&2 "Upgraded files. Now rebuilding..."
-	suitecrm_rebuild
-else
-	echo >&2 "Installation lock is set, so not installing."
-fi
+for sc in /opt/scripts/*.sh; do $sc; done
 
 
-# Create crontab
-if [[ -n $SUITECRM_CRONTAB_ENABLED ]]; then
-	suitecrm_create_crontab || (echo "Failed to create crontab" >&2; exit 70)
-	echo "Crontab set" >&1
-else
-	echo >&2 "Crontab is not set, please use an external crontab, e.g. a webcron service, to run $SUITECRM_INSTALL_DIR/cron.php at every minute."
-fi
+run_init "$@"
 
-entry_finish
+run_setup "$@"
+
+run_finish "$@"
+
+run_entrypoint "$@"

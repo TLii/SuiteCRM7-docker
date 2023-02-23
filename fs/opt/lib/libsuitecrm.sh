@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 check_app_variables() {
-# Test for necessary environment variables and exit if missing crucial ones.
+	# @prepare_env()
+	# Test for necessary environment variables and exit if missing crucial ones.
 	[[ -z $SUITECRM_DATABASE_NAME ]] && (echo "ERROR: you need to set SUITECRM_DATABASE_NAME to continue"; exit 78)
 	[[ -z $SUITECRM_DATABASE_USER ]] && (echo "ERROR: you need to set SUITECRM_DATABASE_USER to continue"; exit 78)
 	[[ -z $SUITECRM_DATABASE_PASSWORD ]] && (echo "ERROR: you need to set SUITECRM_DATABASE_PASSWORD to continue"; exit 78)
@@ -10,11 +11,37 @@ check_app_variables() {
 }
 
 set_apache_config() {
-# Create necessary apache2 config changes to maintain directory similarities
+	# @setup_dependencies
+	# Create necessary apache2 config changes to maintain directory similarities
 	if [[ "$1" == apache2* ]]; then
 		sed -i -e "s|www\.example\.com|$SUITECRM_SITE_URL|g" -e "s|var/www/html|$SUITECRM_INSTALL_DIR|g" -e "s|localhost|$SUITECRM_SITE_URL|g" /etc/apache2/sites-enabled/000-default.conf /etc/apache2/sites-available/default-ssl.conf;
 		sed -i "s|var/www/html|$SUITECRM_INSTALL_DIR|g" /etc/apache2/conf-available/docker-php.conf;
 	fi
+}
+
+test_and_copy() {
+	# @prepare_app
+
+  # Test for existing installation and install as necessary
+	if [ ! -e "/$SUITECRM_INSTALL_DIR/config.php" ] && [ ! -e "/$SUITECRM_INSTALL_DIR/VERSION" ]; then
+		# Copy files, if seemingly not installed.
+		copy_files && install_needed=1
+	elif [[ -z $SUITECRM_IGNORE_VERSION ]]; then
+		# If seems installed and set to upgrade app version with image
+		copy_files
+		update_modules && rebuild_needed=1
+	fi
+
+	if [[ $install_needed == 1 && -z $SUITECRM_MANUAL_INSTALL ]]; then
+		echo "Running silent install..." >&1;
+		suitecrm_install
+	elif [[ rebuild_needed -eq 1 && -z $SUITECRM_MANUAL_UPGRADE ]] ; then
+		echo >&2 "Upgraded files. Now rebuilding..."
+		suitecrm_rebuild
+	else
+		echo >&2 "Installation lock is set, so not installing."
+	fi
+
 }
 
 check_suitecrm_config() {
@@ -61,7 +88,7 @@ copy_files() {
 		# If contentPath exists in source and application directory, exclude it from overwrite
 		contentPath="${contentPath#/usr/src/suitecrm/}"
 		if [ -e "$PWD/$contentPath" ]; then
-			echo >&1 "INFO: '$PWD/$contentPath' exists. Updating only with newer content." 
+			echo >&1 "INFO: '$PWD/$contentPath' exists. Updating only with newer content."
 			sourceTarArgs+=( --exclude "./$contentPath" )
 		fi
 	done
@@ -85,7 +112,7 @@ update_modules() {
 		modules_updated=1
 		echo "$modulePath" has been updated; backup has been saved in "$PWD"/upload/docker-upgrade-backups
 	done
-	if [[ modules_updated -eq 1 ]]; then 
+	if [[ modules_updated -eq 1 ]]; then
 		unset modules_updated
 		return 1
 	fi
@@ -94,7 +121,7 @@ update_modules() {
 suitecrm_install() {
 	# Move silent install configuration to install directory
 	mv fs/opt/suitecrm/templates/config_si.php "$SUITECRM_INSTALL_DIR"/
-    php -r "\$_SERVER['HTTP_HOST'] = 'localhost'; \$_SERVER['REQUEST_URI'] = '$SUITECRM_INSTALL_DIR/install.php';\$_REQUEST = array('goto' => 'SilentInstall', 'cli' => true);require_once '$SUITECRM_INSTALL_DIR/install.php';" >&1; 
+    php -r "\$_SERVER['HTTP_HOST'] = 'localhost'; \$_SERVER['REQUEST_URI'] = '$SUITECRM_INSTALL_DIR/install.php';\$_REQUEST = array('goto' => 'SilentInstall', 'cli' => true);require_once '$SUITECRM_INSTALL_DIR/install.php';" >&1;
     touch "$SUITECRM_INSTALL_DIR"/custom/install.lock || (echo "Failed creating install lock" >&2; exit 73);
 	chown www-data:www-data "$SUITECRM_INSTALL_DIR"/custom/install.lock
     echo "Installation ready" >&1
@@ -104,7 +131,7 @@ suitecrm_rebuild() {
         su -l www-data -s /bin/bash -c "php /opt/suitecrm/repair.php"
     else
         php /opt/suitecrm/repair.php
-    fi 
+    fi
 }
 
 suitecrm_install_cleanup() {
