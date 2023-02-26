@@ -5,246 +5,140 @@ on:
     branches:
     - master
     - develop
+  schedule:
+    - cron: '0 * * * *'
   workflow_dispatch:
-  repository_dispatch:
-    types: [parent_changed]
 
-concurrency: 
+concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: true
-  
+
 jobs:
   build:
+    strategy:
+      matrix:
+        target-stage: [ base, fpm, apache2]
     runs-on: ubuntu-latest
-    
+
+    env:
+      APP_REPOSITORY: https://github.com/salesagility/SuiteCRM.git
+      DOCKER_IMAGE_NAME: suitecrm7/suitecrm7
+      REGISTRY_URL: ${{ secrets.REGISTRY_URL }
+      REGISTRY_USER:  ${{ secrets.REGISTRY_USER }} # If needed
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }} # If needed
+
     steps:
-    - name: Check out CODE
-      uses: actions/checkout@v2
-    
-    - name: Set branch after repo dispatch
-      if: github.event_name == 'repository_dispatch'
-      run: |
-        echo "BRANCH=develop" >> $GITHUB_ENV
+    - name: Code checkout
+      uses: actions/checkout@v3
 
-    - name: Set branch env for other triggers
-      if: github.event_name != 'repository_dispatch'
+    - name: Check app repository for changes
       run: |
-        echo "BRANCH=$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_ENV
+        echo "BUILD_NEEDED=false" >> $GITHUB_ENV
 
-    - name: Set other build variables
-      id: version
-      run: |
-        echo "GITHUB_HASH=$(git rev-parse --short "$GITHUB_SHA")" >> $GITHUB_ENV
-        echo "SUITECRM_VERSION=$(curl -s -o -  https://raw.githubusercontent.com/salesagility/SuiteCRM/master/suitecrm_version.php | grep suitecrm_version | sed "s|$suitecrm_version.*'\(.*\)';|\1|")" >> $GITHUB_ENV
-        if [[ $SUITECRM_VERSION -ne $(cat ./suitecrm_version.txt) ]]; then echo "::set-output name=version_changed::true"; echo $SUITECRM_VERSION >> ./suitecrm_version.txt; else echo "::set-output name=version_changed::false"; fi
+        # Ensure .ci exists
+        [[ -d .ci ]] || mkdir -p .ci
+
+        # Get current app version
+        current_app_version="$(git ls-remote --refs --tags $APP_REPOSITORY | awk '{print $2}' | sed -E 's#.+/tags/(.+)#\1#g' | grep v7 | sort -V | tail -1)"
+
+        if [[ ! -f .ci/app_version || -z $(cat .ci/app_version) ]]; then
+
+          # If upstream version is not recorded, assume version change
+
+          echo "Last upstream version has not been recorded, so assuming version change."
+          echo "APP_VERSION=$current_app_version" >> $GITHUB_ENV
+          echo $current_app_version > .ci/app_version
+
+        elif [[ $current_app_version != $(cat .ci/app_version) ]]; then
+
+          # If current upstream version differs from recorded one, update is needed.
+
+          echo "Last and current upstream versions differ, triggering update"
+          echo $current_app_version > .ci/app_version
+          echo "APP_VERSION=$current_app_version" >> $GITHUB_ENV
+
+        else
+
+          # If upstream is the same, use recorded app version and don't trigger update - at least not yet.
+
+          echo "Upstream version hasn't changed."
+          echo "APP_VERSION=$(cat .ci/app_version)" >> $GITHUB_ENV
+
+        fi
 
     - name: Commit changed version number
       id: commit
-      if: steps.version.outputs.version_changed == 'true'
       run: |
         git config --local user.email "github-actions@github.com"
         git config --local user.name "github-actions"
-        git commit -am "Version bump"
+
+        # Check if files have changed (ie. version change) and if so, trigger a build
         if [-z "$(git status --porcelain)"]; then
-          echo "::set-output name=push::false"
+          echo "BUILD_NEEDED=false" >> $GITHUB_ENV
         else
-          git commit -m "Update SuiteCRM Version number" -a
-          echo "::set-output name=push::true"
+          git commit -am "Automatic version update"
+          echo "BUILD_NEEDED=true" >> $GITHUB_ENV
         fi
       shell: bash
 
-    - name: Set build version
+    - name: Check if build is needed in other situations and prepare for build
+      if: env.BUILD_NEEDED != 'true'
       run: |
-        echo "BUILD_VERSION=$BRANCH-$SUITECRM_VERSION-$GITHUB_RUN_NUMBER" >> $GITHUB_ENV
-    
-    - name: Build master base image and push it to Registry
-      if: env.BRANCH == 'master'
-      # You may pin to the exact commit or the version.
-      # uses: mr-smithers-excellent/docker-build-push@a7fe6652db5c7274374844e81692992f5a2befb9
-      uses: mr-smithers-excellent/docker-build-push@v5.6
-      with:
-        # Name of the Docker image
-        image: suitecrm7/suitecrm7
-        # Tags override for Docker image
-        tags: base, base-latest, base-${{ env.BRANCH }}-latest, base-${{ env.BRANCH }}, base-${{ env.BUILD_VERSION }}, base-${{ env.GITHUB_HASH }}, base-${{ env.SUITECRM_VERSION }}-${{ env.BRANCH }}, base-${{ env.SUITECRM_VERSION }}  # optional
-        # Target Docker registry
-        registry: ${{ secrets.REGISTRY_URL }}
-        # Location of Dockerfile, if not Dockerfile in root directory
-        dockerfile: Dockerfile # optional, default is Dockerfile
-        # Docker build arguments passed via --build-arg
-        #buildArgs: # optional
-        # Docker build labels passed via --label
-        #labels: # optional
-        # Docker build target passed via --target
-        target: base-final # optional
-        # Docker registry username
-        username:  ${{ secrets.REGISTRY_USER }}  # optional
-        # Docker registry password
-        password: ${{ secrets.REGISTRY_PASSWORD }} # optional
-        # Adds latest tag to auto-generated GitOps tag
-        addLatest: false # optional, default is false
-        
-    - name: Build non-master base image and push it to Registry
-      if: env.BRANCH != 'master'
-      # You may pin to the exact commit or the version.
-      # uses: mr-smithers-excellent/docker-build-push@a7fe6652db5c7274374844e81692992f5a2befb9
-      uses: mr-smithers-excellent/docker-build-push@v5.6
-      with:
-        # Name of the Docker image
-        image: suitecrm7/suitecrm7
-        # Tags override for Docker image
-        tags: base-${{ env.BRANCH }}-latest, base-${{ env.BRANCH }}, base-${{ env.BUILD_VERSION }}, base-${{ env.GITHUB_HASH }}, base-${{ env.SUITECRM_VERSION }}-${{ env.BRANCH }} # optional
-        # Target Docker registry
-        registry: ${{ secrets.REGISTRY_URL }}
-        # Location of Dockerfile, if not Dockerfile in root directory
-        dockerfile: Dockerfile # optional, default is Dockerfile
-        # Docker build arguments passed via --build-arg
-        #buildArgs: # optional
-        # Docker build labels passed via --label
-        #labels: # optional
-        # Docker build target passed via --target
-        target: base-final # optional
-        # Docker registry username
-        username:  ${{ secrets.REGISTRY_USER }}  # optional
-        # Docker registry password
-        password: ${{ secrets.REGISTRY_PASSWORD }} # optional
-        # Adds latest tag to auto-generated GitOps tag
-        addLatest: false # optional, default is false
-          
-    - name: Build master fpm image and push it to Registry
-      if: env.BRANCH == 'master'
-      # You may pin to the exact commit or the version.
-      # uses: mr-smithers-excellent/docker-build-push@a7fe6652db5c7274374844e81692992f5a2befb9
-      uses: mr-smithers-excellent/docker-build-push@v5.6
-      with:
-        # Name of the Docker image
-        image: suitecrm7/suitecrm7
-        # Tags override for Docker image
-        tags: fpm, fpm-latest, fpm-${{ env.BRANCH }}-latest, fpm-${{ env.BRANCH }}, fpm-${{ env.BUILD_VERSION }}, fpm-${{ env.GITHUB_HASH }}, fpm-${{ env.SUITECRM_VERSION }}, fpm-${{ env.SUITECRM_VERSION }}-${{ env.BRANCH }}  # optional
-        # Target Docker registry
-        registry: ${{ secrets.REGISTRY_URL }}
-        # Location of Dockerfile, if not Dockerfile in root directory
-        dockerfile: Dockerfile # optional, default is Dockerfile
-        # Docker build arguments passed via --build-arg
-        #buildArgs: # optional
-        # Docker build labels passed via --label
-        #labels: # optional
-        # Docker build target passed via --target
-        target: serve-php-fpm # optional
-        # Docker registry username
-        username:  ${{ secrets.REGISTRY_USER }}  # optional
-        # Docker registry password
-        password: ${{ secrets.REGISTRY_PASSWORD }} # optional
-        # Adds latest tag to auto-generated GitOps tag
-        addLatest: false # optional, default is false
+        # If workflow was triggered by a push or manual dispatch, trigger a build.
+        if [[ $GITHUB_EVENT_NAME == 'push' || $GITHUB_EVENT_NAME == 'workflow_dispatch' ]]; then
+          echo "BUILD_NEEDED=true" >> $GITHUB_ENV
+        fi
 
-    - name: Build non-master fpm image and push it to Registry
-      if: env.BRANCH != 'master'
-      # You may pin to the exact commit or the version.
-      # uses: mr-smithers-excellent/docker-build-push@a7fe6652db5c7274374844e81692992f5a2befb9
+        # Set build variables
+        echo "BRANCH=$(echo ${GITHUB_REF_NAME})" >> $GITHUB_ENV
+        echo "GITHUB_HASH=$(git rev-parse --short "$GITHUB_SHA")" >> $GITHUB_ENV
+        echo "BUILD_VERSION=$BRANCH-$APP_VERSION-$GITHUB_RUN_NUMBER" >> $GITHUB_ENV
+
+    - name: Lint Dockerfile before build
+      if: github.event_name == 'push'
+      uses: hadolint/hadolint-action@v3.1.0
+      with:
+        dockerfile: Dockerfile
+        failure-threshold: warning
+
+    - name: Build master images and push them to Registry
+      if: >-
+        env.BRANCH == 'master' ||
+        env.BUILD_NEEDED == 'true'
       uses: mr-smithers-excellent/docker-build-push@v5.6
       with:
-        # Name of the Docker image
-        image: suitecrm7/suitecrm7
-        # Tags override for Docker image
-        tags: fpm-${{ env.BRANCH }}-latest, fpm-${{ env.BRANCH }}, fpm-${{ env.BUILD_VERSION }}, fpm-${{ env.GITHUB_HASH }}, fpm-${{ env.SUITECRM_VERSION }}-${{ env.BRANCH }}  # optional
-        # Target Docker registry
-        registry: ${{ secrets.REGISTRY_URL }}
-        # Location of Dockerfile, if not Dockerfile in root directory
+        image: ${{ env.DOCKER_IMAGE_NAME }}
+        tags: latest, ${{ matrix.target-stage }}, ${{ matrix.target-stage }}-latest, ${{ matrix.target-stage }}-${{ env.BRANCH }}-latest, ${{ matrix.target-stage }}-${{ env.BRANCH }}, ${{ matrix.target-stage }}-${{ env.BUILD_VERSION }}, ${{ matrix.target-stage }}-${{ env.GITHUB_HASH }}, ${{ matrix.target-stage }}-${{ env.APP_VERSION }}-${{ env.BRANCH }}, ${{ matrix.target-stage }}-${{ env.APP_VERSION }}  # optional
+        registry: ${{ env.REGISTRY_URL }}
         dockerfile: Dockerfile # optional, default is Dockerfile
+        target: ${{ matrix.target-stage }} # optional
+        username:  ${{ env.REGISTRY_USER }}  # optional
+        password: ${{ env.REGISTRY_PASSWORD }} # optional
+
         # Docker build arguments passed via --build-arg
         #buildArgs: # optional
         # Docker build labels passed via --label
         #labels: # optional
-        # Docker build target passed via --target
-        target: serve-php-fpm # optional
-        # Docker registry username
-        username:  ${{ secrets.REGISTRY_USER }}  # optional
-        # Docker registry password
-        password: ${{ secrets.REGISTRY_PASSWORD }} # optional
         # Adds latest tag to auto-generated GitOps tag
-        addLatest: false # optional, default is false
+        #addLatest: false # optional, default is false
 
-    - name: Build master apache2 image and push it to Registry
-      if: env.BRANCH == 'master'
-      # You may pin to the exact commit or the version.
-      # uses: mr-smithers-excellent/docker-build-push@a7fe6652db5c7274374844e81692992f5a2befb9
+    - name: Build non-master images and push them to Registry
+      if: >-
+        env.BRANCH != 'master' ||
+        env.BUILD_NEEDED == 'true'
       uses: mr-smithers-excellent/docker-build-push@v5.6
       with:
-        # Name of the Docker image
-        image: suitecrm7/suitecrm7
-        # Tags override for Docker image
-        tags: latest, apache2, apache2-latest, apache2-${{ env.BRANCH }}-latest, apache2-${{ env.BRANCH }}, apache2-${{ env.BUILD_VERSION }}, apache2-${{ env.GITHUB_HASH }}, ${{ env.SUITECRM_VERSION }}, ${{ env.SUITECRM_VERSION }}-latest, apache2-${{ env.SUITECRM_VERSION }}, apache2-${{ env.SUITECRM_VERSION }}-${{ env.BRANCH }}  # optional
-        # Target Docker registry
-        registry: ${{ secrets.REGISTRY_URL }}
-        # Location of Dockerfile, if not Dockerfile in root directory
+        image: ${{ env.DOCKER_IMAGE_NAME }}
+        tags: ${{ matrix.target-stage }}-${{ env.BRANCH }}-latest, ${{ matrix.target-stage }}-${{ env.BRANCH }}, ${{ matrix.target-stage }}-${{ env.BUILD_VERSION }}, ${{ matrix.target-stage }}-${{ env.GITHUB_HASH }}, ${{ matrix.target-stage }}-${{ env.APP_VERSION }}-${{ env.BRANCH }} # optional
+        registry: ${{ env.REGISTRY_URL }}
         dockerfile: Dockerfile # optional, default is Dockerfile
+        target: ${{ matrix.target-stage }} # optional
+        username:  ${{ env.REGISTRY_USER }}  # optional
+        password: ${{ env.REGISTRY_PASSWORD }} # optional
+
         # Docker build arguments passed via --build-arg
         #buildArgs: # optional
         # Docker build labels passed via --label
         #labels: # optional
-        # Docker build target passed via --target
-        target: serve-php-apache2 # optional
-        # Docker registry username
-        username:  ${{ secrets.REGISTRY_USER }}  # optional
-        # Docker registry password
-        password: ${{ secrets.REGISTRY_PASSWORD }} # optional
         # Adds latest tag to auto-generated GitOps tag
-        addLatest: true # optional, default is false
-        
-    - name: Build non-master apache2 image and push it to Registry
-      if: env.BRANCH != 'master'
-      # You may pin to the exact commit or the version.
-      # uses: mr-smithers-excellent/docker-build-push@a7fe6652db5c7274374844e81692992f5a2befb9
-      uses: mr-smithers-excellent/docker-build-push@v5.6
-      with:
-        # Name of the Docker image
-        image: suitecrm7/suitecrm7
-        # Tags override for Docker image
-        tags: apache2-${{ env.BRANCH }}-latest, apache2-${{ env.BRANCH }}, apache2-${{ env.BUILD_VERSION }}, apache2-${{ env.GITHUB_HASH }}, ${{ env.SUITECRM_VERSION }}-${{ env.BRANCH }}, apache2-${{ env.SUITECRM_VERSION }}-${{ env.BRANCH }}  # optional
-        # Target Docker registry
-        registry: ${{ secrets.REGISTRY_URL }}
-        # Location of Dockerfile, if not Dockerfile in root directory
-        dockerfile: Dockerfile # optional, default is Dockerfile
-        # Docker build arguments passed via --build-arg
-        #buildArgs: # optional
-        # Docker build labels passed via --label
-        #labels: # optional
-        # Docker build target passed via --target
-        target: serve-php-apache2 # optional
-        # Docker registry username
-        username:  ${{ secrets.REGISTRY_USER }}  # optional
-        # Docker registry password
-        password: ${{ secrets.REGISTRY_PASSWORD }} # optional
-        # Adds latest tag to auto-generated GitOps tag
-        addLatest: false # optional, default is false
-
-    - name: Push changed version commit
-      if: steps.commit.outputs.push == 'true'
-      uses: ad-m/github-push-action@master
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Checkout Chart
-      uses: actions/checkout@v3.0.0
-      with: 
-        repository: TLii/SuiteCRM7-chart
-        token: ${{ secrets.PAT }}
-        path: ./chart
-        ref: ${{ env.BRANCH }}
-      
-    - name: Update Chart Versions
-      run: |
-        CHARTVER=$(sed -n  '/^version:.*/p' ./chart/chart/Chart.yaml | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.)
-        sed -i "s/^version:.*/$CHARTVER/" ./chart/chart/Chart.yaml
-        sed -i "s/^appVersion:.*/appVersion: $BUILD_VERSION/" ./chart/chart/Chart.yaml
-        echo "Chart version: $CHARTVER\nApp Version: $BUILD_VERSION"
-        
-    - name: Push Chart
-      run: |
-        cd ./chart
-        git add .
-        git config user.name github-actions
-        git config user.email github-actions@github.com
-        git commit -am "Pipeline/Updated Chart version and App version"
-        git push
+        #addLatest: false # optional, default is false
