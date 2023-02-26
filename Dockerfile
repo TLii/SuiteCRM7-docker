@@ -16,8 +16,8 @@
 
 
 
-# Base image
-FROM debian:bullseye-slim as base
+# Initial image
+FROM debian:bullseye-slim as first
 RUN set -eux; \
     apt update && apt -y upgrade; \
     apt install -y --no-install-recommends \
@@ -54,7 +54,7 @@ FROM composer:1 AS composer
 
 
 # Build with composer
-FROM base as build-php
+FROM first as build-php
 COPY --from=composer /usr/bin/composer /usr/bin/composer
 
 WORKDIR /build
@@ -64,8 +64,8 @@ RUN composer install --no-dev;
 
 
 
-# Create finalized image to be used 
-FROM base as final
+# Create finalized image to be used
+FROM first as final
 
 RUN mv /build /final
 
@@ -73,7 +73,7 @@ RUN mv /build /final
 COPY --from=build-php /build/vendor /final/vendor
 
 # Build an image that can be used as base image for further development
-FROM debian:bullseye-slim as base-final
+FROM debian:bullseye-slim as base
 ENV \
     SUITECRM_DATABASE_COLLATION=utf8_general_ci \
     SUITECRM_DATABASE_DROP_TABLES=0 \
@@ -92,7 +92,7 @@ ENV \
     SUITECRM_DEFAULT_CURRENCY_SYMBOL=€ \
     SUITECRM_DEFAULT_DATE_FORMAT="d.m.y" \
     SUITECRM_DEFAULT_DECIMAL_SEPERATOR="," \
-    SUITECRM_DEFAULT_LANGUAGE=en_US \ 
+    SUITECRM_DEFAULT_LANGUAGE=en_US \
     SUITECRM_DEFAULT_NUMBER_GROUPING_SEPARATOR=" " \
     SUITECRM_DEFAULT_TIME_FORMAT="H:i" \
     SUITECRM_DEFAULT_EXPORT_CHARSET=UTF-8 \
@@ -152,11 +152,11 @@ RUN chmod a+x /docker-entrypoint.sh; chmod a+rx /opt/*/*.sh;
 WORKDIR ${SUITECRM_INSTALL_DIR}
 
 # Run final image with php-fpm
-FROM php:fpm AS serve-php-fpm
+FROM php:fpm AS fpm
 LABEL App=SuiteCRM7
 EXPOSE 9000
 
-# Environment variables. 
+# Environment variables.
 ENV \
     SUITECRM_DATABASE_COLLATION=utf8_general_ci \
     SUITECRM_DATABASE_DROP_TABLES=0 \
@@ -175,7 +175,7 @@ ENV \
     SUITECRM_DEFAULT_CURRENCY_SYMBOL=€ \
     SUITECRM_DEFAULT_DATE_FORMAT="d.m.y" \
     SUITECRM_DEFAULT_DECIMAL_SEPERATOR="," \
-    SUITECRM_DEFAULT_LANGUAGE=en_US \ 
+    SUITECRM_DEFAULT_LANGUAGE=en_US \
     SUITECRM_DEFAULT_NUMBER_GROUPING_SEPARATOR=" " \
     SUITECRM_DEFAULT_TIME_FORMAT="H:i" \
     SUITECRM_DEFAULT_EXPORT_CHARSET=UTF-8 \
@@ -249,11 +249,11 @@ ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["php-fpm"]
 
 # Run final image with apache2 and php
-FROM php:apache as serve-php-apache2
+FROM php:apache as apache2
 LABEL App=SuiteCRM7
 EXPOSE 80
 
-# Environment variables. 
+# Environment variables.
 ENV \
     SUITECRM_DATABASE_COLLATION=utf8_general_ci \
     SUITECRM_DATABASE_DROP_TABLES=0 \
@@ -272,7 +272,7 @@ ENV \
     SUITECRM_DEFAULT_CURRENCY_SYMBOL=€ \
     SUITECRM_DEFAULT_DATE_FORMAT="d.m.y" \
     SUITECRM_DEFAULT_DECIMAL_SEPERATOR="," \
-    SUITECRM_DEFAULT_LANGUAGE=en_US \ 
+    SUITECRM_DEFAULT_LANGUAGE=en_US \
     SUITECRM_DEFAULT_NUMBER_GROUPING_SEPARATOR=" " \
     SUITECRM_DEFAULT_TIME_FORMAT="H:i" \
     SUITECRM_DEFAULT_EXPORT_CHARSET=UTF-8 \
