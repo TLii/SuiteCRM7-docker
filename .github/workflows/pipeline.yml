@@ -23,7 +23,7 @@ jobs:
     env:
       APP_REPOSITORY: https://github.com/salesagility/SuiteCRM.git
       DOCKER_IMAGE_NAME: suitecrm7/suitecrm7
-      REGISTRY_URL: ${{ secrets.REGISTRY_URL }
+      REGISTRY_URL: ${{ secrets.REGISTRY_URL }}
       REGISTRY_USER:  ${{ secrets.REGISTRY_USER }} # If needed
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }} # If needed
 
