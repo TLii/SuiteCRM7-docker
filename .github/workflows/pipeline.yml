@@ -39,7 +39,12 @@ jobs:
     - name: Code checkout
       uses: actions/checkout@v3
 
+    - name: Check if build is really needed
+      run: |
+        if [[ -n $(git status --porcelain | grep -v '.\.github*') ]]; then echo "BUILD_NEEDED=true" >> $GITHUB_ENV; fi
+
     - name: Prepare for build
+      if: env.BUILD_NEEDED == 'true'
       run: |
 
         # Set build variables
@@ -48,7 +53,9 @@ jobs:
         echo "BUILD_VERSION=$BRANCH-$APP_VERSION-$GITHUB_RUN_NUMBER" >> $GITHUB_ENV
 
     - name: Build master images and push them to Registry
-      if: env.BRANCH == 'master'
+      if: >-
+        env.BRANCH == 'master' &&
+        env.BUILD_NEEDED == 'true'
       uses: mr-smithers-excellent/docker-build-push@v5.6
       with:
         image: ${{ env.DOCKER_IMAGE_NAME }}
@@ -67,7 +74,9 @@ jobs:
         #addLatest: false # optional, default is false
 
     - name: Build non-master images and push them to Registry
-      if: env.BRANCH != 'master'
+      if: >-
+        env.BRANCH != 'master' &&
+        env.BUILD_NEEDED == 'true'
       uses: mr-smithers-excellent/docker-build-push@v5.6
       with:
         image: ${{ env.DOCKER_IMAGE_NAME }}
