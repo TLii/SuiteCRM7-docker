@@ -18,6 +18,10 @@ jobs:
       APP_REPOSITORY: https://github.com/salesagility/SuiteCRM.git
 
     steps:
+
+    - name: Code checkout
+      uses: actions/checkout@v3
+
     - name: Check app repository for changes
       run: |
         echo "BUILD_NEEDED=false" >> $GITHUB_ENV
@@ -74,4 +78,4 @@ jobs:
         curl -X POST https://api.github.com/repos/tlii/suitecrm7-docker \
         -H 'Accept: application/vnd.github.everest-preview+json' \
         -u ${{ secrets.PAT }} \
-        --data '{"event_type": "build_needed", "client_payload": { "commit_message": "'Automatic app version bump'" }}'
+        --data '{"event_type": "build_needed", "client_payload": { "commit_message": "'Automatic app version bump'" }}'i
