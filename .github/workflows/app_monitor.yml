@@ -67,7 +67,7 @@ jobs:
         if [-z "$(git status --porcelain)"]; then
           echo "BUILD_NEEDED=false" >> $GITHUB_ENV
         else
-          git commit -am "Automatic version update"
+          git commit -am "chore(app): Automatic version update"
           echo "BUILD_NEEDED=true" >> $GITHUB_ENV
         fi
       shell: bash
