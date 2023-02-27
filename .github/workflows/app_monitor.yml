@@ -3,6 +3,7 @@ name: Monitor app for changes
 on:
   schedule:
     - cron: '0 * * * *'
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
@@ -67,10 +68,10 @@ jobs:
         fi
       shell: bash
 
-    - name: Test
+    - name: Send a build dispatch
       if: env.BUILD_NEEDED == 'true'
       run: |
         curl -X POST https://api.github.com/repos/tlii/suitecrm7-docker \
         -H 'Accept: application/vnd.github.everest-preview+json' \
         -u ${{ secrets.PAT }} \
-        --data '{"event_type": "build_needed", "client_payload": { "repository": "'"$GITHUB_REPOSITORY"'" }}'
+        --data '{"event_type": "build_needed", "client_payload": { "commit_message": "'Automatic app version bump'" }}'

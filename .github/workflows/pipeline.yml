@@ -7,6 +7,8 @@ on:
     - develop
   workflow_dispatch:
   repository_dispatch:
+    types:
+    - build_needed
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
