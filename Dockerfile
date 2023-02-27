@@ -153,7 +153,7 @@ WORKDIR ${SUITECRM_INSTALL_DIR}
 
 # Run final image with php-fpm
 FROM php:fpm AS fpm
-LABEL App=SuiteCRM7
+LABEL App="SuiteCRM7"
 EXPOSE 9000
 
 # Environment variables.
@@ -250,7 +250,7 @@ CMD ["php-fpm"]
 
 # Run final image with apache2 and php
 FROM php:apache as apache2
-LABEL App=SuiteCRM7
+LABEL App="SuiteCRM7"
 EXPOSE 80
 
 # Environment variables.
