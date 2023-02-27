@@ -1,13 +1,12 @@
-name: Pipeline action
+name: Build pipeline
 
 on:
   push:
     branches:
     - master
     - develop
-  schedule:
-    - cron: '0 * * * *'
   workflow_dispatch:
+  repository_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
@@ -17,11 +16,10 @@ jobs:
   build:
     strategy:
       matrix:
-        target-stage: [ base, fpm, apache2]
+        target-stage: [ base, fpm, apache2 ]
     runs-on: ubuntu-latest
 
     env:
-      APP_REPOSITORY: https://github.com/salesagility/SuiteCRM.git
       DOCKER_IMAGE_NAME: suitecrm7/suitecrm7
       REGISTRY_URL: ${{ secrets.REGISTRY_URL }}
       REGISTRY_USER:  ${{ secrets.REGISTRY_USER }} # If needed
@@ -31,63 +29,8 @@ jobs:
     - name: Code checkout
       uses: actions/checkout@v3
 
-    - name: Check app repository for changes
+    - name: Prepare for build
       run: |
-        echo "BUILD_NEEDED=false" >> $GITHUB_ENV
-
-        # Ensure .ci exists
-        [[ -d .ci ]] || mkdir -p .ci
-
-        # Get current app version
-        current_app_version="$(git ls-remote --refs --tags $APP_REPOSITORY | awk '{print $2}' | sed -E 's#.+/tags/(.+)#\1#g' | grep v7 | sort -V | tail -1)"
-
-        if [[ ! -f .ci/app_version || -z $(cat .ci/app_version) ]]; then
-
-          # If upstream version is not recorded, assume version change
-
-          echo "Last upstream version has not been recorded, so assuming version change."
-          echo "APP_VERSION=$current_app_version" >> $GITHUB_ENV
-          echo $current_app_version > .ci/app_version
-
-        elif [[ $current_app_version != $(cat .ci/app_version) ]]; then
-
-          # If current upstream version differs from recorded one, update is needed.
-
-          echo "Last and current upstream versions differ, triggering update"
-          echo $current_app_version > .ci/app_version
-          echo "APP_VERSION=$current_app_version" >> $GITHUB_ENV
-
-        else
-
-          # If upstream is the same, use recorded app version and don't trigger update - at least not yet.
-
-          echo "Upstream version hasn't changed."
-          echo "APP_VERSION=$(cat .ci/app_version)" >> $GITHUB_ENV
-
-        fi
-
-    - name: Commit changed version number
-      id: commit
-      run: |
-        git config --local user.email "github-actions@github.com"
-        git config --local user.name "github-actions"
-
-        # Check if files have changed (ie. version change) and if so, trigger a build
-        if [-z "$(git status --porcelain)"]; then
-          echo "BUILD_NEEDED=false" >> $GITHUB_ENV
-        else
-          git commit -am "Automatic version update"
-          echo "BUILD_NEEDED=true" >> $GITHUB_ENV
-        fi
-      shell: bash
-
-    - name: Check if build is needed in other situations and prepare for build
-      if: env.BUILD_NEEDED != 'true'
-      run: |
-        # If workflow was triggered by a push or manual dispatch, trigger a build.
-        if [[ $GITHUB_EVENT_NAME == 'push' || $GITHUB_EVENT_NAME == 'workflow_dispatch' ]]; then
-          echo "BUILD_NEEDED=true" >> $GITHUB_ENV
-        fi
 
         # Set build variables
         echo "BRANCH=$(echo ${GITHUB_REF_NAME})" >> $GITHUB_ENV
@@ -102,9 +45,7 @@ jobs:
         failure-threshold: warning
 
     - name: Build master images and push them to Registry
-      if: >-
-        env.BRANCH == 'master' ||
-        env.BUILD_NEEDED == 'true'
+      if: env.BRANCH == 'master'
       uses: mr-smithers-excellent/docker-build-push@v5.6
       with:
         image: ${{ env.DOCKER_IMAGE_NAME }}
@@ -123,9 +64,7 @@ jobs:
         #addLatest: false # optional, default is false
 
     - name: Build non-master images and push them to Registry
-      if: >-
-        env.BRANCH != 'master' ||
-        env.BUILD_NEEDED == 'true'
+      if: env.BRANCH != 'master'
       uses: mr-smithers-excellent/docker-build-push@v5.6
       with:
         image: ${{ env.DOCKER_IMAGE_NAME }}
