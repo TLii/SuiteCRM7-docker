@@ -76,4 +76,4 @@ jobs:
     - name: Send a build dispatch
       if: env.BUILD_NEEDED == 'true'
       run: |
-        curl -d "{\"event_type\": \"build_needed\"}" -H "Content-Type: application/json" -H "Authorization: token ${{ secrets.PAT }}" -H "Accept: application/vnd.github.everest-preview+json" "https://api.github.com/repos/tlii/suitecrm7-docker/dispatches"
+        curl -d "{\"event_type\": \"Automatic pipeline after app version update.\"}" -H "Content-Type: application/json" -H "Authorization: token ${{ secrets.PAT }}" -H "Accept: application/vnd.github.everest-preview+json" "https://api.github.com/repos/tlii/suitecrm7-docker/dispatches"
