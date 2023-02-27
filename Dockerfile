@@ -19,8 +19,8 @@
 # Initial image
 FROM debian:bullseye-slim as first
 RUN set -eux; \
-    apt update && apt -y upgrade; \
-    apt install -y --no-install-recommends \
+    apt-get update && apt-get -y upgrade; \
+    apt-get install -y --no-install-recommends \
     curl \
     git \
     gnupg \
@@ -110,10 +110,10 @@ ENV \
     SUITECRM_CRONTAB_ENABLED=yes
 
 # Install modules, clean up and modify values
-RUN apt update && apt -y upgrade; \
+RUN apt-get update && apt-get -y upgrade; \
     #
     # Install dependencies #
-    apt -y install \
+    apt-get -y install \
     cron \
     libzip-dev \
     libfreetype6-dev \
@@ -192,10 +192,10 @@ ENV \
     SUITECRM_CONFIG_LOC=/docker-configs
 
 # Install modules, clean up and modify values
-RUN apt update && apt -y upgrade; \
+RUN apt-get update && apt-get -y upgrade; \
     #
     # Install dependencies #
-    apt -y install \
+    apt-get -y install \
     cron \
     libzip-dev \
     libfreetype6-dev \
@@ -289,10 +289,10 @@ ENV \
     SUITECRM_CONFIG_LOC=/docker-configs
 
 # Install modules, clean up and modify values
-RUN apt update && apt -y upgrade; \
+RUN apt-get update && apt-get -y upgrade; \
     #
     # Install dependencies #
-    apt -y install \
+    apt-get -y install \
     cron \
     libzip-dev \
     libfreetype6-dev \
