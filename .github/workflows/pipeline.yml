@@ -39,13 +39,94 @@ jobs:
     - name: Code checkout
       uses: actions/checkout@v3
 
-    - name: Check if build is really needed
+    - name: Decide if build is needed and how to bump version statement
       run: |
-        if [[ -n $(git status --porcelain | grep -v '.\.github*') ]]; then echo "BUILD_NEEDED=true" >> $GITHUB_ENV; fi
+
+        if [[ $GITHUB_EVENT_NAME == 'workflow' ]]; then
+          # If dispatched manually, we're probably just looking at a new build.
+          echo "BUILD_NEEDED=true" >> $GITHUB_ENV;
+          [[ -z $UPDATE_TYPE ]] && echo "UPDATE_TYPE=build" >> $GITHUB_ENV;
+
+        elif [[ ! -f .ci/last_build_hash.txt || -z .ci/last_build_hash.txt ]]; then
+
+          # If last build was not recorded, assume a rebuild with minimal versioning.
+          echo "BUILD_NEEDED=true" >> $GITHUB_ENV;
+          echo "UPDATE_TYPE=build" >> $GITHUB_ENV;
+
+        else
+
+          # See if there are any file changes since last build that warrant a new build
+          app_changed=false
+          for file in $(git diff --name-only $(cat .ci/last_build_hash.txt) HEAD); do
+
+              # If file is only related to workflows or ci, the chart as changed
+              # Note: We miss changes to description and chart name, but avoid endless version bumps.
+
+              if [[ $file != .*/* ]]; then
+
+                echo  "Chart has been changed; updating chart version for $app in $app/Chart.yaml"
+                app_changed=true
+
+                # No need to continue looping files for this app, so break
+                break
+              fi
+          done
+          [[ app_changed == false ]] && (echo "No build necessary"); exit 0;
+
+        # Possible options are [ major | feature | bug | alpha | beta | pre | rc | build ]
+        # Numeric values are   [  8    |   7     |  6  |  2    |  3   | 4   | 5  |    1 ]
+
+        # Headers as per conventional commits:
+        # build: Changes that affect the build system or external dependencies (example scopes: gulp, broccoli, npm)
+        # ci: Changes to our CI configuration files and scripts (example scopes: Travis, Circle, BrowserStack, SauceLabs)
+        # docs: Documentation only changes
+        # feat: A new feature
+        # fix: A bug fix
+        # perf: A code change that improves performance
+        # refactor: A code change that neither fixes a bug nor adds a feature
+        # style: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc)
+        # test: Adding missing tests or correcting existing tests
+
+        highest=0
+
+        for i in $(git rev-list --format=%B --oneline .. | sed 's/^[a-zA-Z0-9]* \([a-zA-Z]*\)(.*)\([!]\?\).*/\1\2/'); do
+          [[ $i == *\! && $highest < 8 ]] && (highest=8 && continue);
+          [[ $i == 'feat' && $highest < 7 ]] && (highest=7 && continue);
+          [[ $i == 'fix' && $highest < 6 ]] && (highest=6 && continue);
+          [[ $i == 'perf' && $highest < 2 ]] && (highest=2 && continue);
+          [[ $i == 'refactor' && $highest < 2 ]] && (highest=2 && continue);
+          [[ $i == 'test' && $highest < 2 ]] && (highest=2 && continue);
+          [[ $i == 'build' && $highest < 1 ]] && (highest=1 && continue);
+          [[ $i == 'style' && $highest < 1 ]] && (highest=1 && continue);
+          [[ $i == 'docs' ]] && && continue);
+          [[ $i == 'ci' ]] && && continue);
+        done
+
+        case $highest in
+          8)
+            echo "UPDATE_TYPE=major" >> $GITHUB_ENV;
+            ;;
+
+
+    - name: Update semantic version
+      id: bump_version
+      if: >-
+        env.BUILD_NEEDED == 'true' &&
+        env.UPDATE_TYPE != 'none'
+      uses: TLii/increment-semantic-version-with-build-numbers@1.0.0
+      with:
+        current-version: ${{ env.IMAGE_VERSION }}
+        version-fragment: ${{ env.UPDATE_TYPE }}
+        include-build-number: 'true'
+
+    - name: Do something with your bumped release version
+      if: env.BUILD_NEEDED == 'true'
+      run: echo "IMAGE_VERSION=${{ steps.bump_version.outputs.next-version }}" >> $GITHUB_ENV
 
     - name: Prepare for build
       if: env.BUILD_NEEDED == 'true'
       run: |
+        # Update semantic version
 
         # Set build variables
         echo "BRANCH=$(echo ${GITHUB_REF_NAME})" >> $GITHUB_ENV
@@ -93,3 +174,13 @@ jobs:
         #labels: # optional
         # Adds latest tag to auto-generated GitOps tag
         #addLatest: false # optional, default is false
+
+    - name: Commit changed version number
+      id: commit
+      run: |
+        git config --local user.email "github-actions@github.com"
+        git config --local user.name "github-actions"
+        git add -A
+        git commit -am "chore(image): Automatic version update"
+        fi
+      shell: bash
