@@ -287,7 +287,6 @@ jobs:
     if: ${{ needs.pipeline_planner.outputs.update_needed }} == 'true'
     uses: TLii/workflows/.github/workflows/versioning.yml@master
     with:
-      build_branch: ${{ needs.setup.outputs.branch }}
       last_build_head: ${{ needs.setup.outputs.recorded_build_head }}
       current_version: ${{ needs.setup.outputs.recorded_image_version }}
       use_build_numbers: true
