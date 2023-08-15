@@ -308,7 +308,7 @@ jobs:
       LWCRM_PAT: ${{ secrets.lwcrm_pat }}
       REGISTRY_URL: ${{ vars.registry_url }}
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
-      REGISTRY_PASSWORD: ${{ secrets.HARBOR_PASSWORD }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
 
   create_release:
     name: Create a release as needed
@@ -389,7 +389,7 @@ jobs:
     - name: Checkout Chart
       uses: actions/checkout@v3
       with:
-        repository: TLii/lwcrm-chart
+        repository: TLii/SuiteCRM7-chart
         token: ${{ secrets.PAT }}
         path: ./chart
         ref: master
