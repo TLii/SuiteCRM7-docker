@@ -135,7 +135,7 @@ jobs:
       run: |
         app_version=${{ needs.setup.outputs.app_version }}
 
-        recorded_app_version=${{ cat $PWD/.ci/app_version.txt}}
+        recorded_app_version=$(cat $PWD/.ci/app_version.txt)
 
         if [[ $app_version -neq $recorded_app_version ]]; then
           echo "is_new_release=true" >> $GITHUB_OUTPUT
