@@ -51,7 +51,8 @@ jobs:
       id: branches
       run: |
         # If this is a release build, set branches accordingly.
-        if [[ ${{ inputs.is_release_build }} -eq true ]]; then
+        release_check=${{ inputs.is_release_build }}
+        if [[ $release_check == true ]]; then
           branch=master
           upstream_branch=hotfix
 
