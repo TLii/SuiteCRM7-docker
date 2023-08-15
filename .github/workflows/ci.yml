@@ -42,8 +42,13 @@ jobs:
     outputs:
       upstream_branch: ${{ steps.branches.outputs.upstream_branch }}
       branch: ${{ steps.branches.outputs.branch }}
-      app_version: ${{ steps.version.outputs.app_version }}
-
+      recorded_upstream_head: ${{ steps.recorded_versions.outputs.upstream_head }}
+      recorded_build_head: ${{ steps.recorded_versions.outputs.build_head }}
+      recorded_app_version: ${{ steps.recorded_versions.outputs.app_version }}
+      recorded_image_version: ${{ steps.recorded_versions.outputs.image_version }}
+      current_upstream_head: ${{ steps.current_versions.outputs.upstream_head }}
+      current_build_head: ${{ steps.current_versions.outputs.build_head }}
+      current_app_version: ${{ steps.current_versions.outputs.app_version }}
 
     steps:
 
@@ -93,21 +98,80 @@ jobs:
           esac
         fi
 
+    - uses: actions/checkout@v3
+      name: Code checkout
+      with:
+        ref: ${{ steps.branches.outputs.branch }}
 
-    - name: Get version information
-      id: version
+    - name: Get recorded version information
+      id: recorded_versions
       run: |
-        app_version=$(git ls-remote --refs --tags --sort='v:refname' https://github.com/salesagility/SuiteCRM.git | awk '{print $2}' | sed -E 's#.+/tags/(.+)#\1#g' | grep -e 'v[0-9]*.[0-9]*.[0-9]*$' |tail -1)
+        # Get current recorded upstream app head
+        if [[ -f $PWD/.ci/app_head.txt ]]; then
+          recorded_upstream_head=$(cat $PWD/.ci/app_head.txt)
+        else
+          recorded_upstream_head=''
+          touch $PWD/.ci/app_head.txt
+        fi
+        echo "upstream_head=$recorded_upstream_head" >> "$GITHUB_OUTPUT"
+        echo "Last recorded upstream head is $recorded_upstream_head"
+
+        # Get last upstream app version
+        if [[ -f $PWD/.ci/app_version.txt ]]; then
+          recorded_app_version=$(cat $PWD/.ci/app_version.txt)
+        else
+          recorded_app_version=''
+          touch $PWD/.ci/app_version.txt
+        fi
+        echo "app_version=$recorded_app_version" >> "$GITHUB_OUTPUT"
+        echo "Last recorded upstream app version is $recorded_app_version"
+
+        # Get last own build head
+        if [[ -f $PWD/.ci/build_head.txt ]]; then
+          recorded_build_head=$(cat $PWD/.ci/build_head.txt)
+        else
+          recorded_build_head=''
+          touch $PWD/.ci/build_head.txt
+        fi
+        echo "build_head=$recorded_build_head" >> "$GITHUB_OUTPUT"
+
+        # Get last image version
+        if [[ -f $PWD/.ci/image_version.txt ]]; then
+          recorded_image_version=$(cat $PWD/.ci/image_version.txt)
+        else
+          recorded_image_version=''
+          touch $PWD/.ci/image_version.txt
+        fi
+        echo "image_version=$recorded_image_version" >> "$GITHUB_OUTPUT"
+
+    - name: Get current version information
+      id: current_versions
+      run: |
+        # Get current upstream app head
+        upstream_head=$(git ls-remote ${{ vars.upstream_repo }} | grep -e 'refs/heads/${{ steps.branches.outputs.upstream_branch }}$' | head -n1 | awk '{print $1}')
+        [[ -n upstream_head ]] || upstream_head=''
+        echo "Current upstream head is $upstream_head"
+        echo "upstream_head=$upstream_head" >> "$GITHUB_OUTPUT"
+
+        # Get current upstream app version
+        app_version=$(git ls-remote --refs --tags --sort='v:refname' ${{ vars.upstream_repo }} | awk '{print $2}' | sed -E 's#.+/tags/(.+)#\1#g' | grep -e 'v[0-9]*.[0-9]*.[0-9]*$' |tail -1)
         [[ -n app_version ]] || app_version='v0.0.0-temp '
         echo "Current application version is $app_version"
         echo "app_version=$app_version" >> "$GITHUB_OUTPUT"
+
+        # Get current own build head
+        build_head=${{ github.sha }}
+        echo "Current build head is $build_head"
+        echo "build_head=$build_head" >> "$GITHUB_OUTPUT"
+
+        # Current image version will be determined later
 
   check_upstream:
     name: Check upstream for changes
     uses: TLii/workflows/.github/workflows/check_upstream_head.yml@master
     needs: setup
     with:
-      upstream_repo: ${{ vars.UPSTREAM_REPO }}
+      upstream_repo: ${{ vars.upstream_repo }}
       upstream_branch: ${{ needs.setup.outputs.upstream_branch }}
     if: |
       (github.event_name != 'workflow_call' ||
@@ -123,6 +187,7 @@ jobs:
     outputs:
       update_needed: ${{ steps.update.outputs.update_needed }}
       release_needed: ${{ steps.release.outputs.is_new_release }}
+
     steps:
 
     - uses: actions/checkout@v3
@@ -134,32 +199,30 @@ jobs:
     - name: Check if release is needed
       id: release
       run: |
-        app_version=${{ needs.setup.outputs.app_version }}
+        app_version=${{ needs.setup.outputs.current_app_version }}
 
-        recorded_app_version=$(cat $PWD/.ci/app_version.txt)
+        recorded_app_version=${{ needs.setup.outputs.recorded_app_version }}
 
         if [[ $app_version -neq $recorded_app_version ]]; then
           echo "is_new_release=true" >> $GITHUB_OUTPUT
-          echo "is_new_release=true" >> $GITHUB_ENV
           echo "New app release ($app_version) since last build. Will create a new release later."
         else
           echo "Newest app release ($app_version) is the same as recorded version ($recorded_app_version). Not creating a new release."
         fi
+
     - name: Determine if update is needed
       id: update
       run: |
-          # This is a hack to get the event name from the workflow_call event
           event_name=${{ github.event_name }}
-
-          # This is a hack to get the disable_upstream_check input from the workflow_call event
           check_disabled=${{ inputs.disable_upstream_check }}
-          check_release=${{ env.is_new_release }}
+          check_release=${{ steps.release.outputs.is_new_release }}
 
-          # If CI isn't run because of a workflow_call, assume that an update is needed
+          # If CI isn't run because of a workflow_call (ie. manually or because of a push event), assume that an update is needed
           if [[ $event_name != 'workflow_call' ]]; then
             echo "update_needed=true" >> $GITHUB_OUTPUT
             echo "Not called by another workflow; assuming an update is needed."
 
+          # If this is a release build, update is needed
           elif [[ $check_release == true ]]; then
             echo "update_needed=true" >> $GITHUB_OUTPUT
             echo "New release, so updating."
@@ -177,7 +240,7 @@ jobs:
 
   validate:
     name: Validate current source before build
-    needs: pipeline_planner
+    needs: [setup, pipeline_planner]
     if: ${{ needs.pipeline_planner.outputs.update_needed }} == 'true'
     uses: TLii/workflows/.github/workflows/validate.yml@master
     with:
@@ -189,17 +252,19 @@ jobs:
   version:
     name: Decide on versioning before build
     needs: [setup, validate, pipeline_planner]
+    if: ${{ needs.pipeline_planner.outputs.update_needed }} == 'true'
     uses: TLii/workflows/.github/workflows/versioning.yml@master
     with:
       build_branch: ${{ needs.setup.outputs.branch }}
-      last_build_head: ${{ needs.check_upstream.outputs.upstream_head }}
-      current_version: ${{ needs.pipeline_planner.outputs.current_version }}
+      last_build_head: ${{ needs.setup.outputs.recorded_build_head }}
+      current_version: ${{ needs.setup.outputs.recorded_image_version }}
       use_build_numbers: true
 
   build:
     name: Build current source
     needs: [validate, version, setup]
     uses: ./.github/workflows/build.yml
+    if: ${{ needs.pipeline_planner.outputs.update_needed }} == 'true'
     with:
       version_number: ${{ needs.version.outputs.new_version }}
       version_type: ${{ needs.version.outputs.version_type }}
@@ -207,17 +272,19 @@ jobs:
       upstream_head: ${{ needs.check_upstream.outputs.upstream_head }}
       branch: ${{ needs.setup.outputs.branch }}
       app_version: ${{ needs.setup.outputs.app_version }}
-      app_name: ${{ vars.APP_NAME }}
+      app_name: ${{ vars.app_name }}
     secrets:
-      LWCRM_PAT: ${{ secrets.LWCRM_PAT }}
-      REGISTRY_URL: ${{ vars.REGISTRY_URL }}
+      LWCRM_PAT: ${{ secrets.lwcrm_pat }}
+      REGISTRY_URL: ${{ vars.registry_url }}
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.HARBOR_PASSWORD }}
 
   create_release:
-    name: Create a release for at least minor version change in master.
+    name: Create a release as needed
     runs-on: ubuntu-latest
-    if: needs.pipeline_planner.outputs.release_needed == 'true'
+    if: |
+      needs.pipeline_planner.outputs.release_needed == 'true' ||
+      needs.pipeline_planner.outputs.update_needed  == 'true'
     needs: [setup, version, pipeline_planner, build]
 
     steps:
@@ -228,8 +295,51 @@ jobs:
         ref: ${{ needs.setup.outputs.branch }}
         fetch-depth: 0
 
+    - name: Determine release name
+      id: release_name
+      run: |
+        app_version=${{ needs.setup.outputs.current_app_version }}
+        version_type=${{ needs.version.outputs.version_type }}
+        is_new_release=${{ needs.pipeline_planner.outputs.release_needed }}
+        image_version=${{ needs.version.outputs.new_version }}
+
+        if [[ $is_new_release == true ]]; then
+          release_name="New release for ${{ vars.app_name }} $app_version"
+          body="${{ vars.app_name}} got updated to $app_version and a new image was built with version $image_version."
+          release_tag=$app_version
+          makeLatest="false"
+        elif [[ $version_type == 'patch' ]]; then
+          release_name="Patch release $image_version"
+          release_tag=$image_version
+          body="This is an automated patch release for ${{ github.repository }} (not $ {{vars.app_name }}). This release contains bug fixes and/or security updates."
+          makeLatest="true"
+        elif [[ $version_type == 'minor' ]]; then
+          release_name="Minor release $image_version"
+          release_tag=$image_version
+          body="This is an automated minor release for ${{ github.repository }} (not $ {{vars.app_name }}). This release contains new features and/or improvements."
+          makeLatest="true"
+        elif [[ $version_type == 'major' ]]; then
+          release_name="Major release $image_version"
+          release_tag=$image_version
+          body="This is an automated major release for ${{ github.repository }} (not $ {{vars.app_name }}). This release contains breaking changes."
+          makeLatest="true"
+        else
+          release_name="Release $image_version"
+          release_tag=$image_version
+          body="This is an automated release for ${{ github.repository }} (not $ {{vars.app_name }}). This release contains undefined changes."
+          makeLatest="false"
+        fi
+
+        echo "release_tag=$release_tag" >> $GITHUB_OUTPUT
+        echo "release_name=$release_name" >> $GITHUB_OUTPUT
+        echo "release_body=$body" >> $GITHUB_OUTPUT
+        echo "make_latest=$makeLatest" >> $GITHUB_OUTPUT
+
     - name: Create a release
       uses: ncipollo/release-action@v1
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        name: ${{ needs.setup.outputs.app_version }}
+        name: ${{ steps.release_name.outputs.release_name }}
+        tag: ${{ steps.release_name.outputs.release_tag }}
+        body: ${{ steps.release_name.outputs.release_body }}
+        makelatest: ${{ steps.release_name.outputs.make_latest }}
