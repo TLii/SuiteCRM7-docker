@@ -284,6 +284,12 @@ jobs:
     needs: [setup, pipeline_planner, version]
     if: ${{ needs.pipeline_planner.outputs.update_needed }} == 'true'
     steps:
+    - uses: actions/checkout@v3
+      name: Code checkout
+      with:
+        ref: ${{ needs.setup.outputs.branch }}
+        fetch-depth: 0
+        
     - name: Write current version information
       run: |
         echo "${{ needs.setup.outputs.current_upstream_head }}" > $PWD/.ci/app_head.txt
