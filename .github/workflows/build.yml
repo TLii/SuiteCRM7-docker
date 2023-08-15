@@ -109,7 +109,7 @@ jobs:
         addlatest="false"
 
         if [[ ${{ env.branch }} == 'master' ]]; then
-          tags="$tags, latest"
+          tags="latest"
           if [[ -n $app_version ]]; then
             tags="$tags, $app_version-latest, $app-version"
           fi
@@ -117,7 +117,9 @@ jobs:
         fi
 
         if [[ -n $branch ]]; then
-          tags="$tags, $branch, $branch-latest"
+
+          [[ -n $tags ]] && tags="$tags, $branch, $branch-latest"
+          [[ -z $tags ]] && tags="$branch, $branch-latest"
         fi
         if [[ -n branch && -n $app_version ]]; then
           tags="$tags, $branch-$app_version, $branch-$app_version-latest"
@@ -134,7 +136,7 @@ jobs:
         if [[ -n $github_sha ]]; then
           tags="$tags, $github_sha"
         fi
-
+        echo "Tags are: $tags"
         echo "tags=$tags" >> "$GITHUB_ENV"
         echo "addlatest=$addlatest" >> "$GITHUB_ENV"
 
