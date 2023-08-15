@@ -17,7 +17,7 @@
 
 
 # Initial image
-FROM debian:bullseye-slim as first
+FROM debian:bookworm-slim as first
 RUN set -eux; \
     apt-get update && apt-get -y upgrade; \
     apt-get install -y --no-install-recommends \
@@ -44,7 +44,7 @@ WORKDIR /build
 
 # Get source and use latest master
 RUN git clone https://github.com/salesagility/SuiteCRM.git .; \
-    git checkout master;
+    git checkout hotfix;
 
 
 
@@ -113,7 +113,7 @@ ENV \
 RUN apt-get update && apt-get -y upgrade; \
     #
     # Install dependencies #
-    apt-get -y install \
+    apt-get -y install --no-install-recommends \
     cron \
     libzip-dev \
     libfreetype6-dev \
@@ -153,7 +153,7 @@ WORKDIR ${SUITECRM_INSTALL_DIR}
 
 # Run final image with php-fpm
 FROM php:fpm AS fpm
-LABEL App="SuiteCRM7"
+LABEL app="SuiteCRM7"
 EXPOSE 9000
 
 # Environment variables.
@@ -195,7 +195,7 @@ ENV \
 RUN apt-get update && apt-get -y upgrade; \
     #
     # Install dependencies #
-    apt-get -y install \
+    apt-get -y install --no-install-recommends \
     cron \
     libzip-dev \
     libfreetype6-dev \
@@ -250,7 +250,7 @@ CMD ["php-fpm"]
 
 # Run final image with apache2 and php
 FROM php:apache as apache2
-LABEL App="SuiteCRM7"
+LABEL app="SuiteCRM7"
 EXPOSE 80
 
 # Environment variables.
