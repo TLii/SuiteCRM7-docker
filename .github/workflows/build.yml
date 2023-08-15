@@ -79,7 +79,7 @@ jobs:
     - name: Code checkout
       uses: actions/checkout@v3
       with:
-        branch: ${{ inputs.branch }}
+        ref: ${{ inputs.branch }}
 
     - name: Set current head and record it
       run: |
@@ -100,13 +100,41 @@ jobs:
 
     - name: Determine tags
       run: |
+        tags=""
+        branch="${{ env.branch }}"
+        app_version="${{ env.app_version }}"
+        build_version="${{ env.build_version }}"
+        github_hash="${{ env.github_hash }}"
+        github_sha="${{ env.current_head }}"
+        addlatest="false"
+
         if [[ ${{ env.branch }} == 'master' ]]; then
-          tags="latest, ${{ env.branch }}-latest, ${{ env.branch }}, ${{ env.appname }}-${{ env.app_version }}-latest, ${{ env.appname }}-${{ env.app_version }}, ${{ env.appname }}-${{ env.branch }}-${{ env.app_version }}, ${{ env.appname }}-${{ env.build_version }}, ${{ env.build_version }}, ${{ env.github_hash }}"
+          tags="$tags, latest"
+          if [[ -n $app_version ]]; then
+            tags="$tags, $app_version-latest, $app-version"
+          fi
           addlatest="true"
-        else
-          tags="${{ env.branch }}-latest, ${{ env.branch }}, ${{ env.appname }}-${{ env.app_version }}, ${{ env.appname }}-${{ env.branch }}-${{ env.app_version }}, ${{ env.appname }}-${{ env.build_version }}, ${{ env.build_version }}, ${{ env.github_hash }}"
-          addlatest="false"
         fi
+
+        if [[ -n $branch ]]; then
+          tags="$tags, $branch, $branch-latest"
+        fi
+        if [[ -n branch && -n $app_version ]]; then
+          tags="$tags, $branch-$app_version, $branch-$app_version-latest"
+        fi
+
+        if [[ -n $build_version ]]; then
+          tags="$tags, $build_version"
+        fi
+
+        if [[ -n $github_hash ]]; then
+          tags="$tags, $github_hash"
+        fi
+
+        if [[ -n $github_sha ]]; then
+          tags="$tags, $github_sha"
+        fi
+
         echo "tags=$tags" >> "$GITHUB_ENV"
         echo "addlatest=$addlatest" >> "$GITHUB_ENV"
 
@@ -115,7 +143,7 @@ jobs:
       with:
         image: suitecrm7/suitecrm7
         tags: ${{ env.tags }}
-        registry: ${{ secrets.REGISTRY_URL }}
+        registry: ${{ vars.REGISTRY_URL }}
         dockerfile: Dockerfile
         username: ${{ secrets.REGISTRY_USER }} # optional
         password: ${{ secrets.REGISTRY_PASSWORD }} # optional
