@@ -166,38 +166,6 @@ jobs:
 
         # Current image version will be determined later
 
-
-    - name: Write current version information
-      run: |
-        echo "${{ steps.current_versions.outputs.upstream_head }}" > $PWD/.ci/app_head.txt
-        echo "${{ steps.current_versions.outputs.app_version }}" > $PWD/.ci/app_version.txt
-        echo "${{ steps.current_versions.outputs.build_head }}" > $PWD/.ci/build_head.txt
-        echo "${{ steps.current_versions.outputs.image_version }}" > $PWD/.ci/image_version.txt
-        echo "Current values recorded."
-
-    - name: Commit changed version number and changed ci values
-      id: commit
-      if: ${{ github.version_changed == 'true' }}
-      run: |
-        git config --local user.email "github-actions@github.com"
-        git config --local user.name "github-actions"
-        git commit -am "chore(Version bump)"
-        if [-z "$(git status --porcelain)"]; then
-          # If no files were changed, there's nothing to push.
-          echo "push=false" >> "$GITHUB_ENV"
-        else
-          # If files were changed, record the change.
-          git commit -m "Automatic version update" -a
-          echo "push=true" >> "$GITHUB_ENV"
-        fi
-      shell: bash
-
-    - name: Push changed version commit
-      if: ${{ github.push == 'true' }}
-      uses: ad-m/github-push-action@master
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-
   check_upstream:
     name: Check upstream for changes
     uses: TLii/workflows/.github/workflows/check_upstream_head.yml@master
@@ -297,7 +265,7 @@ jobs:
     uses: ./.github/workflows/build.yml
     if: ${{ needs.pipeline_planner.outputs.update_needed }} == 'true'
     with:
-      version_number: ${{ needs.version.outputs.new_version }}
+      version_number: ${{ needs.version.outputs.version }}
       version_type: ${{ needs.version.outputs.version_type }}
       current_head: ${{ github.sha }}
       upstream_head: ${{ needs.check_upstream.outputs.upstream_head }}
@@ -310,13 +278,50 @@ jobs:
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
       REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
 
+  update_version_records:
+    name: Update recorded version string
+    runs-on: ubuntu-latest
+    needs: [setup, pipeline_planner, version]
+    if: ${{ needs.pipeline_planner.outputs.update_needed }} == 'true'
+    steps:
+    - name: Write current version information
+      run: |
+        echo "${{ needs.setup.outputs.current_upstream_head }}" > $PWD/.ci/app_head.txt
+        echo "${{ needs.setup.outputs.current_app_version }}" > $PWD/.ci/app_version.txt
+        echo "${{ needs.setup.outputs.current_build_head }}" > $PWD/.ci/build_head.txt
+        echo "${{ needs.version.outputs.version }}" > $PWD/.ci/image_version.txt
+        echo "Current values recorded."
+
+    - name: Commit changed version number and changed ci values
+      id: commit
+      run: |
+        git config --local user.email "github-actions@github.com"
+        git config --local user.name "github-actions"
+        git commit -am "chore(Version bump)"
+        if [-z "$(git status --porcelain)"]; then
+          # If no files were changed, there's nothing to push.
+          echo "push=false" >> "$GITHUB_ENV"
+        else
+          # If files were changed, record the change.
+          git commit -m "Automatic version update" -a
+          echo "push=true" >> "$GITHUB_ENV"
+        fi
+      shell: bash
+
+    - name: Push changed version commit
+      if: ${{ github.push == 'true' }}
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+
+
   create_release:
     name: Create a release as needed
     runs-on: ubuntu-latest
     if: |
       github.ref_name == 'master' &&
       (needs.pipeline_planner.outputs.release_needed == 'true' ||
-      needs.pipeline_planner.outputs.update_needed  == 'true')
+      needs.pipeline_planner.outputs.version_value  >= 6)
     needs: [setup, version, pipeline_planner, build]
 
     steps:
@@ -333,7 +338,7 @@ jobs:
         app_version=${{ needs.setup.outputs.current_app_version }}
         version_type=${{ needs.version.outputs.version_type }}
         is_new_release=${{ needs.pipeline_planner.outputs.release_needed }}
-        image_version=${{ needs.version.outputs.new_version }}
+        image_version=${{ needs.version.outputs.version }}
 
         if [[ $is_new_release == true ]]; then
           release_name="New release for ${{ vars.app_name }} $app_version"
