@@ -166,6 +166,38 @@ jobs:
 
         # Current image version will be determined later
 
+
+    - name: Write current version information
+      run: |
+        echo "${{ steps.current_versions.outputs.upstream_head }}" > $PWD/.ci/app_head.txt
+        echo "${{ steps.current_versions.outputs.app_version }}" > $PWD/.ci/app_version.txt
+        echo "${{ steps.current_versions.outputs.build_head }}" > $PWD/.ci/build_head.txt
+        echo "${{ steps.current_versions.outputs.image_version }}" > $PWD/.ci/image_version.txt
+        echo "Current values recorded."
+
+    - name: Commit changed version number and changed ci values
+      id: commit
+      if: ${{ github.version_changed == 'true' }}
+      run: |
+        git config --local user.email "github-actions@github.com"
+        git config --local user.name "github-actions"
+        git commit -am "chore(Version bump)"
+        if [-z "$(git status --porcelain)"]; then
+          # If no files were changed, there's nothing to push.
+          echo "push=false" >> "$GITHUB_ENV"
+        else
+          # If files were changed, record the change.
+          git commit -m "Automatic version update" -a
+          echo "push=true" >> "$GITHUB_ENV"
+        fi
+      shell: bash
+
+    - name: Push changed version commit
+      if: ${{ github.push == 'true' }}
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+
   check_upstream:
     name: Check upstream for changes
     uses: TLii/workflows/.github/workflows/check_upstream_head.yml@master
@@ -283,8 +315,9 @@ jobs:
     name: Create a release as needed
     runs-on: ubuntu-latest
     if: |
-      needs.pipeline_planner.outputs.release_needed == 'true' ||
-      needs.pipeline_planner.outputs.update_needed  == 'true'
+      github.ref_name == 'master' &&
+      (needs.pipeline_planner.outputs.release_needed == 'true' ||
+      needs.pipeline_planner.outputs.update_needed  == 'true')
     needs: [setup, version, pipeline_planner, build]
 
     steps:
@@ -343,3 +376,37 @@ jobs:
         tag: ${{ steps.release_name.outputs.release_tag }}
         body: ${{ steps.release_name.outputs.release_body }}
         makelatest: ${{ steps.release_name.outputs.make_latest }}
+
+  update_chart:
+    name: Update chart upon release
+    runs-on: ubuntu-latest
+    if: |
+      github.ref_name == 'master' &&
+      (needs.pipeline_planner.outputs.release_needed == 'true' ||
+      needs.pipeline_planner.outputs.update_needed  == 'true')
+    needs: [setup, version, pipeline_planner, build, create_release]
+
+    steps:
+    - name: Checkout Chart
+      uses: actions/checkout@v3
+      with:
+        repository: TLii/lwcrm-chart
+        token: ${{ secrets.PAT }}
+        path: ./chart
+        ref: master
+
+    - name: Update Chart Versions
+      run: |
+        CHARTVER=$(sed -n  '/^version:.*/p' "./chart/Chart.yaml" | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.)
+        sed -i "s/^version:.*/$CHARTVER/" "./chart/Chart.yaml"
+        sed -i "s/^appVersion:.*/appVersion: ${{ needs.setup.outputs.current_app_version }} /" "./chart/Chart.yaml"
+        echo "Chart version: $CHARTVER\nApp Version: ${{ needs.setup.outputs.current_app_version }}"
+
+    - name: Push Chart
+      run: |
+        cd ./chart
+        git add .
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+        git commit -am "chore(Automatic version updates from CI)"
+        git push
