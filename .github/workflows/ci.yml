@@ -58,7 +58,7 @@ jobs:
 
         # In other cases, determine upstream between "develop" and "hotfix"
 
-        elif {{ github.event_name == 'workflow_call }}; then
+        elif ${{ github.event_name == 'workflow_call' }}; then
         # If branch and upstream branch were given as inputs, use them.
           upstream_branch="${{ inputs.upstream_branch }}"
           branch="${{ inputs.branch }}"
