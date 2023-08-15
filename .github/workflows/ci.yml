@@ -1,0 +1,234 @@
+name: CI pipeline for SuiteCRM 7 container build
+
+
+on:
+  push:
+
+  pull_request:
+    types: [opened, reopened]
+
+  workflow_call:
+    inputs:
+      disable_upstream_check:
+        type: boolean
+        required: false
+        description: 'Disable upstream check e.g. if that has already been done and new data committed to repository.'
+      upstream_head:
+        type: string
+        required: false
+        description: 'Commit id on the upstream'
+      upstream_branch:
+        type: string
+        required: false
+        description: 'Upstream branch to use'
+        default: hotfix
+      branch:
+        type: string
+        required: false
+        description: 'Branch to use'
+        default: ${{ github.ref_name }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+
+  # Setup ALWAYS depends on the project!
+  setup:
+    name: Setup Workflow run
+    runs-on: ubuntu-latest
+
+    outputs:
+      upstream_branch: ${{ steps.branches.outputs.upstream_branch }}
+      branch: ${{ steps.branches.outputs.branch }}
+      app_version: ${{ steps.version.outputs.app_version }}
+
+
+    steps:
+
+    - name: Set working branches
+      id: branches
+      run: |
+        # If this is a release build, set branches accordingly.
+        if [[ ${{ inputs.is_release_build }} -eq true ]]; then
+          branch=master
+          upstream_branch=hotfix
+
+        # In other cases, determine upstream between "develop" and "hotfix"
+
+        elif {{ github.event_name == 'workflow_call }}; then
+        # If branch and upstream branch were given as inputs, use them.
+          upstream_branch="${{ inputs.upstream_branch }}"
+          branch="${{ inputs.branch }}"
+
+          echo "Using input branch '$branch' and input upstream branch '$upstream_branch'"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "upstream_branch=$upstream_branch" >> "$GITHUB_OUTPUT"
+
+        else
+        # If branches were not provided, determine based on working branch.
+
+          branch=${{ github.ref_name }}
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
+          case $branch in
+            'volatile')
+              echo "upstream_branch=develop" >> "$GITHUB_OUTPUT"
+              echo "Upstream branch is 'develop'"
+              ;;
+            'develop')
+              echo "upstream_branch=hotfix" >> "$GITHUB_OUTPUT"
+              echo "Upstream branch is 'hotfix'"
+              ;;
+            'master')
+              echo "upstream_branch=hotfix" >> "$GITHUB_OUTPUT"
+              echo "Upstream branch is 'hotfix'"
+              ;;
+            *)
+              echo "upstream_branch=hotfix" >> "$GITHUB_OUTPUT"
+              echo "Didn't recognize branch '$branch' for upstream, so using 'hotfix' as upstream branch."
+              ;;
+          esac
+        fi
+
+
+    - name: Get version information
+      id: version
+      run: |
+        app_version=$(git ls-remote --refs --tags --sort='v:refname' https://github.com/salesagility/SuiteCRM.git | awk '{print $2}' | sed -E 's#.+/tags/(.+)#\1#g' | grep -e 'v[0-9]*.[0-9]*.[0-9]*$' |tail -1)
+        [[ -n app_version ]] || app_version='v0.0.0-temp '
+        echo "Current application version is $app_version"
+        echo "app_version=$app_version" >> "$GITHUB_OUTPUT"
+
+  check_upstream:
+    name: Check upstream for changes
+    uses: TLii/workflows/.github/workflows/check_upstream_head.yml@master
+    needs: setup
+    with:
+      upstream_repo: ${{ vars.UPSTREAM_REPO }}
+      upstream_branch: ${{ needs.setup.outputs.upstream_branch }}
+    if: |
+      (github.event_name != 'workflow_call' ||
+      (github.event_name == 'workflow_call' &&
+      inputs.disable_upstream_check != true))
+
+
+  pipeline_planner:
+    name: Decide on which steps to run
+    runs-on: ubuntu-latest
+    needs: [setup, check_upstream]
+    if: success() || failure()
+    outputs:
+      update_needed: ${{ steps.update.outputs.update_needed }}
+      release_needed: ${{ steps.release.outputs.is_new_release }}
+    steps:
+
+    - uses: actions/checkout@v3
+      name: Code checkout
+      with:
+        ref: ${{ needs.setup.outputs.branch }}
+        fetch-depth: 0
+
+    - name: Check if release is needed
+      id: release
+      run: |
+        app_version=${{ needs.setup.outputs.app_version }}
+
+        recorded_app_version=${{ cat $PWD/.ci/app_version.txt}}
+
+        if [[ $app_version -neq $recorded_app_version ]]; then
+          echo "is_new_release=true" >> $GITHUB_OUTPUT
+          echo "is_new_release=true" >> $GITHUB_ENV
+          echo "New app release ($app_version) since last build. Will create a new release later."
+        else
+          echo "Newest app release ($app_version) is the same as recorded version ($recorded_app_version). Not creating a new release."
+        fi
+    - name: Determine if update is needed
+      id: update
+      run: |
+          # This is a hack to get the event name from the workflow_call event
+          event_name=${{ github.event_name }}
+
+          # This is a hack to get the disable_upstream_check input from the workflow_call event
+          check_disabled=${{ inputs.disable_upstream_check }}
+          check_release=${{ env.is_new_release }}
+
+          # If CI isn't run because of a workflow_call, assume that an update is needed
+          if [[ $event_name != 'workflow_call' ]]; then
+            echo "update_needed=true" >> $GITHUB_OUTPUT
+            echo "Not called by another workflow; assuming an update is needed."
+
+          elif [[ $check_release == true ]]; then
+            echo "update_needed=true" >> $GITHUB_OUTPUT
+            echo "New release, so updating."
+
+          # If CI is run because of a workflow_call and upstream check is disabled, assume that an update is needed
+          elif [[ $event_name == 'workflow_call' && $check_disabled != true ]]; then
+            echo "update_needed=true" >> $GITHUB_OUTPUT
+            echo "Seems like an update is needed."
+
+          # If no condition was met, assume update isn't needed
+          else
+            echo "update_needed=false" >> $GITHUB_OUTPUT
+            echo "Seems like an update isn't needed (or I didn't understand the run)."
+          fi
+
+  validate:
+    name: Validate current source before build
+    needs: pipeline_planner
+    if: ${{ needs.pipeline_planner.outputs.update_needed }} == 'true'
+    uses: TLii/workflows/.github/workflows/validate.yml@master
+    with:
+      php_enabled: true
+      php_version: '7.4'
+      docker_enabled: true
+      shell_enabled: true
+
+  version:
+    name: Decide on versioning before build
+    needs: [setup, validate, pipeline_planner]
+    uses: TLii/workflows/.github/workflows/versioning.yml@master
+    with:
+      build_branch: ${{ needs.setup.outputs.branch }}
+      last_build_head: ${{ needs.check_upstream.outputs.upstream_head }}
+      current_version: ${{ needs.pipeline_planner.outputs.current_version }}
+      use_build_numbers: true
+
+  build:
+    name: Build current source
+    needs: [validate, version, setup]
+    uses: ./.github/workflows/build.yml
+    with:
+      version_number: ${{ needs.version.outputs.new_version }}
+      version_type: ${{ needs.version.outputs.version_type }}
+      current_head: ${{ github.sha }}
+      upstream_head: ${{ needs.check_upstream.outputs.upstream_head }}
+      branch: ${{ needs.setup.outputs.branch }}
+      app_version: ${{ needs.setup.outputs.app_version }}
+      app_name: ${{ vars.APP_NAME }}
+    secrets:
+      LWCRM_PAT: ${{ secrets.LWCRM_PAT }}
+      REGISTRY_URL: ${{ vars.REGISTRY_URL }}
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.HARBOR_PASSWORD }}
+
+  create_release:
+    name: Create a release for at least minor version change in master.
+    runs-on: ubuntu-latest
+    if: needs.pipeline_planner.outputs.release_needed == 'true'
+    needs: [setup, version, pipeline_planner, build]
+
+    steps:
+
+    - uses: actions/checkout@v3
+      name: Code checkout
+      with:
+        ref: ${{ needs.setup.outputs.branch }}
+        fetch-depth: 0
+
+    - name: Create a release
+      uses: ncipollo/release-action@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        name: ${{ needs.setup.outputs.app_version }}

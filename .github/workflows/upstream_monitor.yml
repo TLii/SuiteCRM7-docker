@@ -1,0 +1,23 @@
+name: Monitor upstream for changes
+
+on:
+  schedule:
+    - cron: '30 */12 * * *'
+
+jobs:
+
+  check_upstream:
+    name: Check upstream for changes
+    uses: TLii/workflows/.github/workflows/check_upstream_head.yml@master
+    with:
+      upstream_branch: hotfix
+
+  ci:
+    needs: check_upstream
+    name: Run CI after upstream change
+    uses: ./github/workflows/ci.yml
+    if: needs.check_upstream.outputs.upstream_changed
+    with:
+      disable_upstream_check: true
+      upstream_head: ${{ needs.check_upstream.outputs.upstream_head }}
+      is_release_build:

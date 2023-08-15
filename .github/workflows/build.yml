@@ -1,0 +1,182 @@
+name: Build new image
+
+on:
+  workflow_call:
+    inputs:
+      app_version:
+        type: string
+        description: 'Version of the app to build'
+        required: true
+        default: '1.0.0'
+      version_number:
+        type: string
+        required: false
+        default: '0.0.0'
+        description: Version number to use for the build
+      version_type:
+        type: string
+        required: false
+        default: 'build'
+        description: Type of versioning to use for the build
+      current_head:
+        type: string
+        required: false
+        default: ''
+        description: Current HEAD of the branch
+      branch:
+        type: string
+        required: false
+        default: ''
+        description: Branch to build
+      upstream_head:
+        type: string
+        required: false
+        default: ''
+        description: Current HEAD of the upstream branch
+      ci_location:
+        type: string
+        required: false
+        default: '.ci'
+        description: Location of the CI data folder
+      app_name:
+        type: string
+        required: true
+        description: Name of the app to build
+    secrets:
+      LWCRM_PAT:
+        description: 'PAT for LWCRM'
+        required: true
+      REGISTRY_URL:
+        description: 'Registry URL'
+        required: true
+      REGISTRY_USERNAME:
+        description: 'Registry username'
+        required: true
+      REGISTRY_PASSWORD:
+        description: 'Registry password'
+        required: true
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        stage: [base, fpm, apache2]
+
+    env:
+      appname: ${{ inputs.app_name }}
+      app_version: ${{ inputs.app_version }}
+      cidata: ${{ inputs.ci_location }}
+      upstream_head: ${{ inputs.upstream_head }}
+      current_head: ${{ inputs.current_head }}
+      version_number: ${{ inputs.version_number }}
+      branch: ${{ inputs.branch }}
+
+
+    steps:
+
+    - name: Code checkout
+      uses: actions/checkout@v3
+      with:
+        branch: ${{ inputs.branch }}
+
+    - name: Write current version information
+      run: |
+
+        # Ensure ${{ env.cidata }} exists
+        [[ ! -d ${{ env.cidata }} ]] && mkdir -p ${{ env.cidata }}
+
+        [[ -n ${{ env.current_head }} ]] && echo "${{ env.current_head }}" > "${{ env.cidata }}/current_head.txt"
+        [[ -n ${{ env.version_number }} ]] && echo "${{ env.version_number }}" > "${{ env.cidata }}/version_number.txt"
+        [[ -n ${{ env.upstream_head }} ]] && echo "${{ env.upstream_head }}" > "${{ env.cidata }}/upstream_head.txt"
+        [[ -n ${{ env.upstream_version }} ]] && echo "${{ env.upstream_version }}" > "${{ env.cidata }}/upstream_version.txt"
+        echo "Current values recorded."
+
+    - name: Set current head and record it
+      run: |
+
+        GITHUB_HASH=$(git rev-parse --short "${{ env.current_head }}")
+        echo "Github SHA: ${{ env.current_head }}"
+        echo "Github HASH: $GITHUB_HASH"
+        echo "github_hash=$GITHUB_HASH" >> "$GITHUB_ENV"
+
+    - name: Set build-version
+      run: |
+        echo "Branch: ${{ env.branch }}"
+        echo "Github hash: ${{ env.github_hash }}"
+        echo "${{ env.appname }} version: ${{ env.app_version }}"
+        build_version="${{ env.app_version }}-mod-${{ env.version_number }}"
+        echo "Build version: $build_version"
+        echo "build_version=$build_version" >> "$GITHUB_ENV"
+
+    - name: Commit changed version number and changed ci values
+      id: commit
+      if: ${{ github.version_changed == 'true' }}
+      run: |
+        git config --local user.email "github-actions@github.com"
+        git config --local user.name "github-actions"
+        git commit -am "chore(Version bump)"
+        if [-z "$(git status --porcelain)"]; then
+          # If no files were changed, there's nothing to push.
+          echo "push=false" >> "$GITHUB_ENV"
+        else
+          # If files were changed, record the change.
+          git commit -m "Automatic version update" -a
+          echo "push=true" >> "$GITHUB_ENV"
+        fi
+      shell: bash
+
+    - name: Determine tags
+      run: |
+        if [[ ${{ env.branch }} == 'master' ]]; then
+          tags="latest, ${{ env.branch }}-latest, ${{ env.branch }}, ${{ env.appname }}-${{ env.APP_VERSION }}-latest, ${{ env.appname }}-${{ env.APP_VERSION }}, ${{ env.appname }}-${{ env.branch }}-${{ env.APP_VERSION }}, ${{ env.appname }}-${{ env.BUILD_VERSION }}, ${{ env.BUILD_VERSION }}, ${{ env.GITHUB_HASH }}"
+          addlatest="true"
+        else
+          tags="${{ env.branch }}-latest, ${{ env.branch }}, ${{ env.appname }}-${{ env.APP_VERSION }}, ${{ env.appname }}-${{ env.branch }}-${{ env.APP_VERSION }}, ${{ env.appname }}-${{ env.BUILD_VERSION }}, ${{ env.BUILD_VERSION }}, ${{ env.GITHUB_HASH }}"
+          addlatest="false"
+        fi
+        echo "tags=$tags" >> "$GITHUB_ENV"
+        echo "addlatest=$addlatest" >> "$GITHUB_ENV"
+
+    - name: Build and push container image
+      uses: mr-smithers-excellent/docker-build-push@v6.2
+      with:
+        image: lwcrm/${{ env.branch }}
+        tags: ${{ env.tags }}
+        registry: ${{ secrets.REGISTRY_URL }}
+        dockerfile: Dockerfile
+        username: ${{ secrets.REGISTRY_USER }} # optional
+        password: ${{ secrets.REGISTRY_PASSWORD }} # optional
+        addLatest: ${{ env.addlatest }}
+        target: ${{ matrix.stage }}
+
+    - name: Push changed version commit
+      if: ${{ github.push == 'true' }}
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Checkout Chart
+      uses: actions/checkout@v3
+      with:
+        repository: TLii/lwcrm-chart
+        token: ${{ secrets.LWCRM_PAT }}
+        path: ./chart
+        ref: master
+
+    - name: Update Chart Versions
+      run: |
+        CHARTVER=$(sed -n  '/^version:.*/p' "./chart/charts/$BRANCH/Chart.yaml" | awk -F. '/[0-9]+\./{$NF++;print}' OFS=.)
+        sed -i "s/^version:.*/$CHARTVER/" "./chart/charts/$BRANCH/Chart.yaml"
+        sed -i "s/^appVersion:.*/appVersion: $BUILD_VERSION/" "./chart/charts/$BRANCH/Chart.yaml"
+        echo "Chart version: $CHARTVER\nApp Version: $BUILD_VERSION"
+
+    - name: Push Chart
+      run: |
+        cd ./chart
+        git add .
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+        git commit -am "chore(Automatic version updates from CI)"
+        git push
