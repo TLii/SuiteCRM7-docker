@@ -94,17 +94,17 @@ jobs:
         echo "Branch: ${{ env.branch }}"
         echo "Github hash: ${{ env.github_hash }}"
         echo "${{ env.appname }} version: ${{ env.app_version }}"
-        build_version="${{ env.app_version }}-mod-${{ env.version_number }}"
+        build_version="${{ env.app_version }}-img-${{ env.version_number }}"
         echo "Build version: $build_version"
         echo "build_version=$build_version" >> "$GITHUB_ENV"
 
     - name: Determine tags
       run: |
         if [[ ${{ env.branch }} == 'master' ]]; then
-          tags="latest, ${{ env.branch }}-latest, ${{ env.branch }}, ${{ env.appname }}-${{ env.APP_VERSION }}-latest, ${{ env.appname }}-${{ env.APP_VERSION }}, ${{ env.appname }}-${{ env.branch }}-${{ env.APP_VERSION }}, ${{ env.appname }}-${{ env.BUILD_VERSION }}, ${{ env.BUILD_VERSION }}, ${{ env.GITHUB_HASH }}"
+          tags="latest, ${{ env.branch }}-latest, ${{ env.branch }}, ${{ env.appname }}-${{ env.app_version }}-latest, ${{ env.appname }}-${{ env.app_version }}, ${{ env.appname }}-${{ env.branch }}-${{ env.app_version }}, ${{ env.appname }}-${{ env.build_version }}, ${{ env.build_version }}, ${{ env.github_hash }}"
           addlatest="true"
         else
-          tags="${{ env.branch }}-latest, ${{ env.branch }}, ${{ env.appname }}-${{ env.APP_VERSION }}, ${{ env.appname }}-${{ env.branch }}-${{ env.APP_VERSION }}, ${{ env.appname }}-${{ env.BUILD_VERSION }}, ${{ env.BUILD_VERSION }}, ${{ env.GITHUB_HASH }}"
+          tags="${{ env.branch }}-latest, ${{ env.branch }}, ${{ env.appname }}-${{ env.app_version }}, ${{ env.appname }}-${{ env.branch }}-${{ env.app_version }}, ${{ env.appname }}-${{ env.build_version }}, ${{ env.build_version }}, ${{ env.github_hash }}"
           addlatest="false"
         fi
         echo "tags=$tags" >> "$GITHUB_ENV"
@@ -113,7 +113,7 @@ jobs:
     - name: Build and push container image
       uses: mr-smithers-excellent/docker-build-push@v6.2
       with:
-        image: lwcrm/${{ env.branch }}
+        image: suitecrm7/suitecrm7
         tags: ${{ env.tags }}
         registry: ${{ secrets.REGISTRY_URL }}
         dockerfile: Dockerfile
@@ -121,5 +121,3 @@ jobs:
         password: ${{ secrets.REGISTRY_PASSWORD }} # optional
         addLatest: ${{ env.addlatest }}
         target: ${{ matrix.stage }}
-
-
