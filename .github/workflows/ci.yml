@@ -280,7 +280,7 @@ jobs:
   update_version_records:
     name: Update recorded version string
     runs-on: ubuntu-latest
-    needs: [setup, pipeline_planner, version]
+    needs: [setup, pipeline_planner, version, build]
     if: ${{ needs.pipeline_planner.outputs.update_needed }} == 'true'
     steps:
     - uses: actions/checkout@v3
