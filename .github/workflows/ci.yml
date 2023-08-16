@@ -253,7 +253,7 @@ jobs:
 
   version:
     name: Decide on versioning before build
-    needs: [setup, validate, pipeline_planner]
+    needs: [setup, pipeline_planner]
     if: ${{ needs.pipeline_planner.outputs.update_needed }} == 'true'
     uses: TLii/workflows/.github/workflows/versioning.yml@master
     with:
@@ -263,7 +263,7 @@ jobs:
 
   build:
     name: Build current source
-    needs: [validate, version, setup]
+    needs: [validate, version, setup, pipeline_planner]
     uses: ./.github/workflows/build.yml
     if: ${{ needs.pipeline_planner.outputs.update_needed }} == 'true'
     with:
@@ -272,7 +272,7 @@ jobs:
       current_head: ${{ github.sha }}
       upstream_head: ${{ needs.check_upstream.outputs.upstream_head }}
       branch: ${{ needs.setup.outputs.branch }}
-      app_version: ${{ needs.setup.outputs.app_version }}
+      app_version: ${{ needs.setup.outputs.current_app_version }}
       app_name: ${{ vars.app_name }}
       registry_url: ${{ vars.registry_url }}
     secrets: inherit
