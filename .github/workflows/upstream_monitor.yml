@@ -11,6 +11,8 @@ jobs:
     uses: TLii/workflows/.github/workflows/check_upstream_head.yml@master
     with:
       upstream_branch: hotfix
+      upstream_repo: ${{ vars.upstream_repo }}
+
 
   ci:
     needs: check_upstream
@@ -20,4 +22,3 @@ jobs:
     with:
       disable_upstream_check: true
       upstream_head: ${{ needs.check_upstream.outputs.upstream_head }}
-      is_release_build:
