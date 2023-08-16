@@ -265,8 +265,8 @@ jobs:
     uses: ./.github/workflows/build.yml
     if: ${{ needs.pipeline_planner.outputs.update_needed }} == 'true'
     with:
-      version_number: ${{ needs.version.outputs.version }}
-      version_type: ${{ needs.version.outputs.version_type }}
+      version_number: ${{ needs.version.outputs.new_version }}
+      version_type: ${{ needs.version.outputs.new_version_string }}
       current_head: ${{ github.sha }}
       upstream_head: ${{ needs.check_upstream.outputs.upstream_head }}
       branch: ${{ needs.setup.outputs.branch }}
@@ -292,7 +292,7 @@ jobs:
         echo "${{ needs.setup.outputs.current_upstream_head }}" > $PWD/.ci/app_head.txt
         echo "${{ needs.setup.outputs.current_app_version }}" > $PWD/.ci/app_version.txt
         echo "${{ needs.setup.outputs.current_build_head }}" > $PWD/.ci/build_head.txt
-        echo "${{ needs.version.outputs.version }}" > $PWD/.ci/image_version.txt
+        echo "${{ needs.version.outputs.new_version }}" > $PWD/.ci/image_version.txt
         echo "Current values recorded."
 
     - name: Commit changed version number and changed ci values
@@ -339,9 +339,9 @@ jobs:
       id: release_name
       run: |
         app_version=${{ needs.setup.outputs.current_app_version }}
-        version_type=${{ needs.version.outputs.version_type }}
+        version_type=${{ needs.version.outputs.new_version_string }}
         is_new_release=${{ needs.pipeline_planner.outputs.release_needed }}
-        image_version=${{ needs.version.outputs.version }}
+        image_version=${{ needs.version.outputs.new_version}}
 
         if [[ $is_new_release == true ]]; then
           release_name="New release for ${{ vars.app_name }} $app_version"

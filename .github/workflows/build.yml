@@ -26,7 +26,7 @@ on:
       branch:
         type: string
         required: false
-        default: ''
+        default: ${{ github.ref }}
         description: Branch to build
       upstream_head:
         type: string
