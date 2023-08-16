@@ -148,7 +148,7 @@ jobs:
         tags: ${{ env.tags }}
         registry: ${{ inputs.registry_url }}
         dockerfile: Dockerfile
-        username: ${{ secrets.registry_user }}
+        username: ${{ secrets.registry_username }}
         password: ${{ secrets.registry_password }}
         addLatest: ${{ env.addlatest }}
         target: ${{ matrix.stage }}
