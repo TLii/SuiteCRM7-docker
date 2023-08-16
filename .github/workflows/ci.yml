@@ -274,9 +274,9 @@ jobs:
       app_name: ${{ vars.app_name }}
       registry_url: ${{ vars.registry_url }}
     secrets:
-      PAT: ${{ secrets.pat }}
-      REGISTRY_USERNAME: ${{ secrets.registry_username }}
-      REGISTRY_PASSWORD: ${{ secrets.registry_password }}
+      pat: ${{ secrets.pat }}
+      registry_username: ${{ secrets.registry_username }}
+      registry_password: ${{ secrets.registry_password }}
 
   update_version_records:
     name: Update recorded version string
