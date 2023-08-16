@@ -134,6 +134,7 @@ jobs:
           touch $PWD/.ci/build_head.txt
         fi
         echo "build_head=$recorded_build_head" >> "$GITHUB_OUTPUT"
+        echo "Last recorded build head is $recorded_build_head"
 
         # Get last image version
         if [[ -f $PWD/.ci/image_version.txt ]]; then
@@ -143,6 +144,7 @@ jobs:
           touch $PWD/.ci/image_version.txt
         fi
         echo "image_version=$recorded_image_version" >> "$GITHUB_OUTPUT"
+        echo "Last recorded image version is $recorded_image_version"
 
     - name: Get current version information
       id: current_versions
