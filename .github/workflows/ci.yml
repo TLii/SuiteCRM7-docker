@@ -303,7 +303,7 @@ jobs:
         git config --local user.email "github-actions@github.com"
         git config --local user.name "github-actions"
         git commit -am "chore(Version bump)"
-        if [-z "$(git status --porcelain)"]; then
+        if [[ -z "$(git status --porcelain)" ]]; then
           # If no files were changed, there's nothing to push.
           echo "push=false" >> "$GITHUB_ENV"
         else
