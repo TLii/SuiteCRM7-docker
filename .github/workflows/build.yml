@@ -42,6 +42,10 @@ on:
         type: string
         required: true
         description: Name of the app to build
+      registry_url:
+        type: string
+        required: true
+        description: URL of the registry to push to
     secrets:
       pat:
         description: 'Personal access token'
@@ -142,7 +146,7 @@ jobs:
       with:
         image: suitecrm7/suitecrm7
         tags: ${{ env.tags }}
-        registry: ${{ vars.registry_url }}
+        registry: ${{ inputs.registry_url }}
         dockerfile: Dockerfile
         username: ${{ secrets.registry_user }}
         password: ${{ secrets.registry_password }}

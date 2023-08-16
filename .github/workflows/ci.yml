@@ -272,9 +272,9 @@ jobs:
       branch: ${{ needs.setup.outputs.branch }}
       app_version: ${{ needs.setup.outputs.app_version }}
       app_name: ${{ vars.app_name }}
+      registry_url: ${{ vars.registry_url }}
     secrets:
       PAT: ${{ secrets.pat }}
-      REGISTRY_URL: ${{ vars.registry_url }}
       REGISTRY_USERNAME: ${{ secrets.registry_username }}
       REGISTRY_PASSWORD: ${{ secrets.registry_password }}
 
