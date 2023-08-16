@@ -314,7 +314,7 @@ jobs:
       shell: bash
 
     - name: Push changed version commit
-      if: ${{ github.push == 'true' }}
+      if: ${{ env.push == 'true' }}
       uses: ad-m/github-push-action@master
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -401,6 +401,7 @@ jobs:
       with:
         repository: TLii/SuiteCRM7-chart
         token: ${{ secrets.pat }}
+        username: TLii
         path: ./chart
         ref: master
 
