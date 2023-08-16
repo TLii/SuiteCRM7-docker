@@ -102,7 +102,7 @@ jobs:
         if [[ ${{ env.branch }} == 'master' ]]; then
           tags="latest"
           if [[ -n $app_version ]]; then
-            tags="$tags, $app_version-latest, $app-version"
+            tags="$tags, $app_version-latest, $app_version"
           fi
           addlatest="true"
         fi
