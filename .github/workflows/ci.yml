@@ -273,10 +273,7 @@ jobs:
       app_version: ${{ needs.setup.outputs.app_version }}
       app_name: ${{ vars.app_name }}
       registry_url: ${{ vars.registry_url }}
-    secrets:
-      pat: ${{ secrets.pat }}
-      registry_username: ${{ secrets.registry_username }}
-      registry_password: ${{ secrets.registry_password }}
+    secrets: inherit
 
   update_version_records:
     name: Update recorded version string

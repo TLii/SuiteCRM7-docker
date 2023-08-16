@@ -46,16 +46,6 @@ on:
         type: string
         required: true
         description: URL of the registry to push to
-    secrets:
-      pat:
-        description: 'Personal access token'
-        required: true
-      registry_username:
-        description: 'Registry username'
-        required: true
-      registry_password:
-        description: 'Registry password'
-        required: true
 
 jobs:
 
