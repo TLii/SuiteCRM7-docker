@@ -46,9 +46,6 @@ on:
       LWCRM_PAT:
         description: 'PAT for LWCRM'
         required: true
-      REGISTRY_URL:
-        description: 'Registry URL'
-        required: true
       REGISTRY_USERNAME:
         description: 'Registry username'
         required: true
@@ -65,7 +62,7 @@ jobs:
         stage: [base, fpm, apache2]
 
     env:
-      appname: ${{ inputs.app_name }}
+      app_name: ${{ inputs.app_name }}
       app_version: ${{ inputs.app_version }}
       cidata: ${{ inputs.ci_location }}
       upstream_head: ${{ inputs.upstream_head }}
@@ -81,7 +78,7 @@ jobs:
       with:
         ref: ${{ inputs.branch }}
 
-    - name: Set current head and record it
+    - name: Get current head and shorten it for tags
       run: |
 
         GITHUB_HASH=$(git rev-parse --short "${{ env.current_head }}")
@@ -93,7 +90,7 @@ jobs:
       run: |
         echo "Branch: ${{ env.branch }}"
         echo "Github hash: ${{ env.github_hash }}"
-        echo "${{ env.appname }} version: ${{ env.app_version }}"
+        echo "${{ env.app_name }} version: ${{ env.app_version }}"
         build_version="${{ env.app_version }}-img-${{ env.version_number }}"
         echo "Build version: $build_version"
         echo "build_version=$build_version" >> "$GITHUB_ENV"
@@ -147,7 +144,7 @@ jobs:
         tags: ${{ env.tags }}
         registry: ${{ vars.REGISTRY_URL }}
         dockerfile: Dockerfile
-        username: ${{ secrets.REGISTRY_USER }} # optional
-        password: ${{ secrets.REGISTRY_PASSWORD }} # optional
+        username: ${{ secrets.REGISTRY_USER }}
+        password: ${{ secrets.REGISTRY_PASSWORD }}
         addLatest: ${{ env.addlatest }}
         target: ${{ matrix.stage }}
