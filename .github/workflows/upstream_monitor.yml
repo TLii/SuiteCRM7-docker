@@ -17,7 +17,7 @@ jobs:
   ci:
     needs: check_upstream
     name: Run CI after upstream change
-    uses: ./github/workflows/ci.yml
+    uses: ./.github/workflows/ci.yml
     if: needs.check_upstream.outputs.upstream_changed
     with:
       disable_upstream_check: true

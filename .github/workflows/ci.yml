@@ -302,13 +302,13 @@ jobs:
       run: |
         git config --local user.email "github-actions@github.com"
         git config --local user.name "github-actions"
-        git commit -am "chore(Version bump)"
+        git add .
         if [[ -z "$(git status --porcelain)" ]]; then
           # If no files were changed, there's nothing to push.
           echo "push_needed=false" >> "$GITHUB_OUTPUT"
         else
           # If files were changed, record the change.
-          git commit -m "Automatic version update" -a
+          git commit -m "chore(Automatic version update)" -a
           echo "push_needed=true" >> "$GITHUB_OUTPUT"
         fi
       shell: bash
@@ -384,7 +384,7 @@ jobs:
         name: ${{ steps.release_name.outputs.release_name }}
         tag: ${{ steps.release_name.outputs.release_tag }}
         body: ${{ steps.release_name.outputs.release_body }}
-        makelatest: ${{ steps.release_name.outputs.make_latest }}
+        makeLatest: ${{ steps.release_name.outputs.make_latest }}
 
   update_chart:
     name: Update chart upon release
@@ -401,7 +401,6 @@ jobs:
       with:
         repository: TLii/SuiteCRM7-chart
         token: ${{ secrets.pat }}
-        username: TLii
         path: ./chart
         ref: master
 
