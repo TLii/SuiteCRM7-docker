@@ -151,11 +151,13 @@ RUN chmod a+x /docker-entrypoint.sh; chmod a+rx /opt/*/*.sh;
 
 WORKDIR ${SUITECRM_INSTALL_DIR}
 
+USER 33:33
+
 # Run final image with php-fpm
 FROM php:fpm AS fpm
 LABEL app="SuiteCRM7"
 EXPOSE 9000
-
+USER root
 # Environment variables.
 ENV \
     SUITECRM_DATABASE_COLLATION=utf8_general_ci \
@@ -243,7 +245,7 @@ COPY --from=final --chown=www-data:www-data /final /usr/src/suitecrm
 RUN chmod a+x /docker-entrypoint.sh;
 
 WORKDIR ${SUITECRM_INSTALL_DIR}
-
+USER 33:33
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
 CMD ["php-fpm"]
@@ -252,7 +254,7 @@ CMD ["php-fpm"]
 FROM php:apache as apache2
 LABEL app="SuiteCRM7"
 EXPOSE 80
-
+USER root:root
 # Environment variables.
 ENV \
     SUITECRM_DATABASE_COLLATION=utf8_general_ci \
@@ -339,6 +341,8 @@ COPY --from=final --chown=www-data:www-data /final /usr/src/suitecrm
 RUN chmod a+x /docker-entrypoint.sh;
 
 WORKDIR ${SUITECRM_INSTALL_DIR}
+
+USER 33:33
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
