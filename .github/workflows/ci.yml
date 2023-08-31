@@ -107,41 +107,41 @@ jobs:
       id: recorded_versions
       run: |
         # Get current recorded upstream app head
-        if [[ -f $PWD/.ci/app_head.txt ]]; then
-          recorded_upstream_head=$(cat $PWD/.ci/app_head.txt)
+        if [[ -f $PWD/.ci/app_head-${{ github.ref_name }}.txt ]]; then
+          recorded_upstream_head=$(cat $PWD/.ci/app_head-${{ github.ref_name }}.txt)
         else
           recorded_upstream_head=''
-          touch $PWD/.ci/app_head.txt
+          touch $PWD/.ci/app_head-${{ github.ref_name }}.txt
         fi
         echo "upstream_head=$recorded_upstream_head" >> "$GITHUB_OUTPUT"
         echo "Last recorded upstream head is $recorded_upstream_head"
 
         # Get last upstream app version
-        if [[ -f $PWD/.ci/app_version.txt ]]; then
-          recorded_app_version=$(cat $PWD/.ci/app_version.txt)
+        if [[ -f $PWD/.ci/app_version-${{ github.ref_name }}.txt ]]; then
+          recorded_app_version=$(cat $PWD/.ci/app_version-${{ github.ref_name }}.txt)
         else
           recorded_app_version=''
-          touch $PWD/.ci/app_version.txt
+          touch $PWD/.ci/app_version-${{ github.ref_name }}.txt
         fi
         echo "app_version=$recorded_app_version" >> "$GITHUB_OUTPUT"
         echo "Last recorded upstream app version is $recorded_app_version"
 
         # Get last own build head
-        if [[ -f $PWD/.ci/build_head.txt ]]; then
-          recorded_build_head=$(cat $PWD/.ci/build_head.txt)
+        if [[ -f $PWD/.ci/build_head-${{ github.ref_name }}.txt ]]; then
+          recorded_build_head=$(cat $PWD/.ci/build_head-${{ github.ref_name }}.txt)
         else
           recorded_build_head=''
-          touch $PWD/.ci/build_head.txt
+          touch $PWD/.ci/build_head-${{ github.ref_name }}.txt
         fi
         echo "build_head=$recorded_build_head" >> "$GITHUB_OUTPUT"
         echo "Last recorded build head is $recorded_build_head"
 
         # Get last image version
-        if [[ -f $PWD/.ci/image_version.txt ]]; then
-          recorded_image_version=$(cat $PWD/.ci/image_version.txt)
+        if [[ -f $PWD/.ci/image_version-${{ github.ref_name }}.txt ]]; then
+          recorded_image_version=$(cat $PWD/.ci/image_version-${{ github.ref_name }}.txt)
         else
           recorded_image_version=''
-          touch $PWD/.ci/image_version.txt
+          touch $PWD/.ci/image_version-${{ github.ref_name }}.txt
         fi
         echo "image_version=$recorded_image_version" >> "$GITHUB_OUTPUT"
         echo "Last recorded image version is $recorded_image_version"
@@ -291,10 +291,10 @@ jobs:
 
     - name: Write current version information
       run: |
-        echo "${{ needs.setup.outputs.current_upstream_head }}" > $PWD/.ci/app_head.txt
-        echo "${{ needs.setup.outputs.current_app_version }}" > $PWD/.ci/app_version.txt
-        echo "${{ needs.setup.outputs.current_build_head }}" > $PWD/.ci/build_head.txt
-        echo "${{ needs.version.outputs.new_version }}" > $PWD/.ci/image_version.txt
+        echo "${{ needs.setup.outputs.current_upstream_head }}" > $PWD/.ci/app_head-${{ github.ref_name }}.txt
+        echo "${{ needs.setup.outputs.current_app_version }}" > $PWD/.ci/app_version-${{ github.ref_name }}.txt
+        echo "${{ needs.setup.outputs.current_build_head }}" > $PWD/.ci/build_head-${{ github.ref_name }}.txt
+        echo "${{ needs.version.outputs.new_version }}" > $PWD/.ci/image_version-${{ github.ref_name }}.txt
         echo "Current values recorded."
 
     - name: Commit changed version number and changed ci values
