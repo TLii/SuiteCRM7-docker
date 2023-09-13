@@ -294,7 +294,7 @@ ENV \
 RUN apt-get update && apt-get -y upgrade; \
     #
     # Install dependencies #
-    apt-get -y install \
+    apt-get -y install --no-install-recommends\
     cron \
     libzip-dev \
     libfreetype6-dev \
