@@ -11,6 +11,7 @@ check_app_variables() {
 
 	# Add certain environment variables
 	export SUITECRM_INSTALL_DIR=$PWD; # Installation directory has been determined by Dockerfile and set as WORKDIR.
+	[[ -z "$SUITECRM_CONFIG_LOC" ]] && export SUITECRM_CONFIG_LOC="/docker-configs"; # Config mountable location
 }
 
 set_apache_config() {
