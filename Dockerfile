@@ -23,6 +23,8 @@ ARG DEBIAN_VERSION=12.1 \
     SUITECRM_CONFIG_LOC=/docker-configs
 
 
+## INITIAL BUILD
+# Create initial base image
 FROM debian:${DEBIAN_VERSION-slim} as first
 RUN set -eux; \
     apt-get update && apt-get -y upgrade; \
@@ -59,7 +61,7 @@ FROM composer:$COMPOSER_VERSION AS composer
 
 
 
-# Build with composer
+# Run composer install to get dependencies
 FROM first as build-php
 COPY --from=composer /usr/bin/composer /usr/bin/composer
 
@@ -70,7 +72,7 @@ RUN composer install --no-dev;
 
 
 
-# Create finalized image to be used
+# Finalize build
 FROM first as final
 
 RUN mv /build /final
@@ -78,6 +80,8 @@ RUN mv /build /final
 # Copy processed artifacts to final image
 COPY --from=build-php /build/vendor /final/vendor
 
+
+# Build a final base image
 FROM debian:${DEBIAN_VERSION}-slim as base
 ENV \
     SUITECRM_DATABASE_COLLATION=utf8_general_ci \
@@ -108,10 +112,8 @@ ENV \
     SUITECRM_ADMIN_PASSWORD=changeme753 \
     SUITECRM_ADMIN_USER=admin123 \
     SUITECRM_HOSTNAME=localhost \
-    SUITECRM_INSTALL_DIR=/suitecrm \
     SUITECRM_SITE_NAME=SuiteCRM \
     SUITECRM_SITE_URL=example.com \
-    SUITECRM_CONFIG_LOC=/docker-configs \
     SUITECRM_CRONTAB_ENABLED=yes
 
 # Install modules, clean up and modify values
@@ -193,10 +195,8 @@ ENV \
     SUITECRM_ADMIN_PASSWORD=changeme753 \
     SUITECRM_ADMIN_USER=admin123 \
     SUITECRM_HOSTNAME=localhost \
-    SUITECRM_INSTALL_DIR=/suitecrm \
     SUITECRM_SITE_NAME=SuiteCRM \
     SUITECRM_SITE_URL=example.com \
-    SUITECRM_CONFIG_LOC=/docker-configs
 
 # Install modules, clean up and modify values
 RUN apt-get update && apt-get -y upgrade; \
@@ -290,10 +290,8 @@ ENV \
     SUITECRM_ADMIN_PASSWORD=changeme753 \
     SUITECRM_ADMIN_USER=admin123 \
     SUITECRM_HOSTNAME=localhost \
-    SUITECRM_INSTALL_DIR=/suitecrm \
     SUITECRM_SITE_NAME=SuiteCRM \
     SUITECRM_SITE_URL=example.com \
-    SUITECRM_CONFIG_LOC=/docker-configs
 
 # Install modules, clean up and modify values
 RUN apt-get update && apt-get -y upgrade; \

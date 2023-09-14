@@ -31,7 +31,7 @@ test_and_copy() {
 		# Copy files, if seemingly not installed.
 		copy_files && install_needed=1
 	elif [[ -z $SUITECRM_IGNORE_VERSION ]]; then
-		# If seems installed and set to upgrade app version with image
+		# If installed and version is not ignored, update.
 		copy_files
 		update_modules && rebuild_needed=1
 	fi
@@ -43,7 +43,7 @@ test_and_copy() {
 		echo >&2 "Upgraded files. Now rebuilding..."
 		suitecrm_rebuild
 	else
-		echo >&2 "Installation lock is set, so not installing."
+		echo >&2 "Not upgrading."
 	fi
 
 }
@@ -93,6 +93,7 @@ copy_files() {
 		contentPath="${contentPath%/}"
 		[ -e "$contentPath" ] || continue
 		# If contentPath exists in source and application directory, exclude it from overwrite
+		# We'll update such content to newer versions later on
 		contentPath="${contentPath#/usr/src/suitecrm/}"
 		if [ -e "$PWD/$contentPath" ]; then
 			echo >&1 "INFO: '$PWD/$contentPath' exists. Updating only with newer content."
