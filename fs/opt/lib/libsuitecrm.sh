@@ -8,6 +8,9 @@ check_app_variables() {
 	[[ -z $SUITECRM_DATABASE_PASSWORD ]] && (echo "ERROR: you need to set SUITECRM_DATABASE_PASSWORD to continue"; exit 78)
 	[[ -z $SUITECRM_DATABASE_HOST ]] && (echo "ERROR: you need to set SUITECRM_DATABASE_HOST to continue"; exit 78)
 	[[ -z $SUITECRM_SITE_URL ]] && (echo "ERROR: you need to set SUITECRM_SITE_URL to continue"; exit 78)
+
+	# Add certain environment variables
+	export SUITECRM_INSTALL_DIR=$PWD; # Installation directory has been determined by Dockerfile and set as WORKDIR.
 }
 
 set_apache_config() {

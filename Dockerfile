@@ -14,10 +14,16 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+## ARGUMENTS
+
+ARG DEBIAN_VERSION=12.1 \
+    COMPOSER_VERSION=1 \
+    PHP_VERSION=8.2 \
+    SUITECRM_INSTALL_DIR=/suitecrm \
+    SUITECRM_CONFIG_LOC=/docker-configs
 
 
-# Initial image
-FROM debian:bookworm-slim as first
+FROM debian:${DEBIAN_VERSION-slim} as first
 RUN set -eux; \
     apt-get update && apt-get -y upgrade; \
     apt-get install -y --no-install-recommends \
@@ -49,7 +55,7 @@ RUN git clone https://github.com/salesagility/SuiteCRM.git .; \
 
 
 # Get Composer binary to use in other images
-FROM composer:1 AS composer
+FROM composer:$COMPOSER_VERSION AS composer
 
 
 
@@ -72,8 +78,7 @@ RUN mv /build /final
 # Copy processed artifacts to final image
 COPY --from=build-php /build/vendor /final/vendor
 
-# Build an image that can be used as base image for further development
-FROM debian:bullseye-slim as base
+FROM debian:${DEBIAN_VERSION}-slim as base
 ENV \
     SUITECRM_DATABASE_COLLATION=utf8_general_ci \
     SUITECRM_DATABASE_DROP_TABLES=0 \
@@ -154,7 +159,7 @@ WORKDIR ${SUITECRM_INSTALL_DIR}
 USER 33:33
 
 # Run final image with php-fpm
-FROM php:fpm AS fpm
+FROM php:${PHP_VERSION}-fpm AS fpm
 LABEL app="SuiteCRM7"
 EXPOSE 9000
 USER root
@@ -251,7 +256,7 @@ ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["php-fpm"]
 
 # Run final image with apache2 and php
-FROM php:apache as apache2
+FROM php:${PHP_VERSION}-apache as apache2
 LABEL app="SuiteCRM7"
 EXPOSE 80
 USER root:root
