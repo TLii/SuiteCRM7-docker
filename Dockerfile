@@ -121,7 +121,6 @@ RUN apt-get update && apt-get -y upgrade; \
     #
     # Install dependencies #
     apt-get -y install --no-install-recommends \
-    cron \
     libzip-dev \
     libfreetype6-dev \
     libjpeg62-turbo-dev \
@@ -204,7 +203,6 @@ RUN apt-get update && apt-get -y upgrade; \
     #
     # Install dependencies #
     apt-get -y install --no-install-recommends \
-    cron \
     libzip-dev \
     libfreetype6-dev \
     libjpeg62-turbo-dev \
@@ -300,7 +298,6 @@ RUN apt-get update && apt-get -y upgrade; \
     #
     # Install dependencies #
     apt-get -y install --no-install-recommends\
-    cron \
     libzip-dev \
     libfreetype6-dev \
     libjpeg62-turbo-dev \
