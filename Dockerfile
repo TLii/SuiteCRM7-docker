@@ -25,7 +25,7 @@ ARG DEBIAN_VERSION=12.1 \
 
 ## INITIAL BUILD
 # Create initial base image
-FROM debian:${DEBIAN_VERSION-slim} as first
+FROM debian:${DEBIAN_VERSION}-slim as first
 RUN set -eux; \
     apt-get update && apt-get -y upgrade; \
     apt-get install -y --no-install-recommends \
