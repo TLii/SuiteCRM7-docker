@@ -21,7 +21,6 @@ on:
         type: string
         required: false
         description: 'Upstream branch to use'
-        default: hotfix
       branch:
         type: string
         required: false
@@ -139,6 +138,10 @@ jobs:
         # Get last image version
         if [[ -f $PWD/.ci/image_version-${{ github.ref_name }}.txt ]]; then
           recorded_image_version=$(cat $PWD/.ci/image_version-${{ github.ref_name }}.txt)
+          [[ -n recorded_image_version ]] || (
+            echo "No recorded image version, using 0.0.1"
+            recorded_image_version="0.0.1"
+          )
         else
           recorded_image_version=''
           touch $PWD/.ci/image_version-${{ github.ref_name }}.txt
@@ -149,9 +152,10 @@ jobs:
     - name: Get current version information
       id: current_versions
       run: |
-        # Get current upstream app head
+        # Get current upstream app head by checking its repository.
+        # *NOTE*: This command depends of the target repo and should always be verified by hand.
         upstream_head=$(git ls-remote ${{ vars.upstream_repo }} | grep -e 'refs/heads/${{ steps.branches.outputs.upstream_branch }}$' | head -n1 | awk '{print $1}')
-        [[ -n upstream_head ]] || upstream_head=''
+        [[ -n upstream_head ]] || echo "No upstream head found!"
         echo "Current upstream head is $upstream_head"
         echo "upstream_head=$upstream_head" >> "$GITHUB_OUTPUT"
 
