@@ -114,7 +114,7 @@ ENV \
     SUITECRM_HOSTNAME=localhost \
     SUITECRM_SITE_NAME=SuiteCRM \
     SUITECRM_SITE_URL=example.com \
-    SUITECRM_CRONTAB_ENABLED=yes
+    SUITECRM_INSTALLED=false
 
 # Install modules, clean up and modify values
 RUN apt-get update && apt-get -y upgrade; \
@@ -197,6 +197,7 @@ ENV \
     SUITECRM_HOSTNAME=localhost \
     SUITECRM_SITE_NAME=SuiteCRM \
     SUITECRM_SITE_URL=example.com \
+    SUITECRM_INSTALLED=false
 
 # Install modules, clean up and modify values
 RUN apt-get update && apt-get -y upgrade; \
@@ -292,6 +293,7 @@ ENV \
     SUITECRM_HOSTNAME=localhost \
     SUITECRM_SITE_NAME=SuiteCRM \
     SUITECRM_SITE_URL=example.com \
+    SUITECRM_INSTALLED=false
 
 # Install modules, clean up and modify values
 RUN apt-get update && apt-get -y upgrade; \
