@@ -35,6 +35,11 @@ In addition to the mandatory environment variables there are some optional ones:
 - SUITECRM_MANUAL_INSTALL: If set to any non-null value, silent installer (automatic install) is not run, and you must install manually.
 - SUITECRM_MANUAL_UPGRADE: *Not recommended.* If set to any non-null value, updates are not *applied* automatically (ie. Quick Repair and Rebuild is not run). Might be useful for debugging.
 
+## Running the cronjob
+For scheduled events and other automation to work, SuiteCRM requires a cronjob to be run. The simplest (and recommended) way is to run this image in a second container with the same volume mounts and mountpoints, but changing entrypoint to `/docker-cron.sh`. The second container will then set up a busybox-based crond and run cron.php every minute as recommended in the SuiteCRM docs.
+
+If you want different intervals or other changes, your best bet would be running `docker exec` controlled by the host system's crond or, in Kubernetes, set up a CronJob doing the same.
+
 ## Adding own scripts
 The container setup runs in three (or four, if you count entrypoint) stages:
 1. `init` - Initialization before the app is set up.

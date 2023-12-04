@@ -1,0 +1,2 @@
+# Add SuiteCRM's default cron
+* * * * * cd $SUITECRM_INSTALL_DIR; php -f cron.php > /dev/null 2>&1

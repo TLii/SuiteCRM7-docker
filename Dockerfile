@@ -153,7 +153,10 @@ VOLUME ${SUITECRM_INSTALL_DIR}
 COPY fs /
 COPY --from=final --chown=www-data:www-data /final /usr/src/suitecrm
 
-RUN chmod a+x /docker-entrypoint.sh; chmod a+rx /opt/*/*.sh;
+# Prepare container scripts
+RUN chmod a+x /docker-entrypoint.sh; \
+    chmod a+x /docker-cron.sh; \
+    chmod a+rx /opt/*/*.sh;
 
 WORKDIR ${SUITECRM_INSTALL_DIR}
 
@@ -246,7 +249,10 @@ VOLUME ${SUITECRM_INSTALL_DIR}
 COPY fs /
 COPY --from=final --chown=www-data:www-data /final /usr/src/suitecrm
 
-RUN chmod a+x /docker-entrypoint.sh;
+# Prepare container scripts
+RUN chmod a+x /docker-entrypoint.sh; \
+    chmod a+x /docker-cron.sh; \
+    chmod a+rx /opt/*/*.sh;
 
 WORKDIR ${SUITECRM_INSTALL_DIR}
 USER 33:33
@@ -340,8 +346,11 @@ VOLUME ${SUITECRM_INSTALL_DIR}
 COPY fs /
 COPY --from=final --chown=www-data:www-data /final /usr/src/suitecrm
 
-RUN chmod a+x /docker-entrypoint.sh;
-
+# Prepare container scripts
+RUN chmod a+x /docker-entrypoint.sh; \
+    chmod a+x /docker-cron.sh; \
+    chmod a+rx /opt/*/*.sh;
+    
 WORKDIR ${SUITECRM_INSTALL_DIR}
 
 USER 33:33
