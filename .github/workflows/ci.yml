@@ -41,10 +41,10 @@ jobs:
     outputs:
       upstream_branch: ${{ steps.branches.outputs.upstream_branch }}
       branch: ${{ steps.branches.outputs.branch }}
-      recorded_upstream_head: ${{ steps.recorded_versions.outputs.upstream_head }}
-      recorded_build_head: ${{ steps.recorded_versions.outputs.build_head }}
-      recorded_app_version: ${{ steps.recorded_versions.outputs.app_version }}
-      recorded_image_version: ${{ steps.recorded_versions.outputs.image_version }}
+      recorded_upstream_head: ${{ steps.recorded_versions.outputs.recorded_upstream_head }}
+      recorded_build_head: ${{ steps.recorded_versions.outputs.recorded_build_head }}
+      recorded_app_version: ${{ steps.recorded_versions.outputs.recorded_app_version }}
+      recorded_image_version: ${{ steps.recorded_versions.outputs.recorded_image_version }}
       current_upstream_head: ${{ steps.current_versions.outputs.upstream_head }}
       current_build_head: ${{ steps.current_versions.outputs.build_head }}
       current_app_version: ${{ steps.current_versions.outputs.app_version }}
@@ -112,7 +112,7 @@ jobs:
           recorded_upstream_head=''
           touch $PWD/.ci/app_head-${{ github.ref_name }}.txt
         fi
-        echo "upstream_head=$recorded_upstream_head" >> "$GITHUB_OUTPUT"
+        echo "recorded_upstream_head=$recorded_upstream_head" >> "$GITHUB_OUTPUT"
         echo "Last recorded upstream head is $recorded_upstream_head"
 
         # Get last upstream app version
@@ -122,7 +122,7 @@ jobs:
           recorded_app_version=''
           touch $PWD/.ci/app_version-${{ github.ref_name }}.txt
         fi
-        echo "app_version=$recorded_app_version" >> "$GITHUB_OUTPUT"
+        echo "recorded_app_version=$recorded_app_version" >> "$GITHUB_OUTPUT"
         echo "Last recorded upstream app version is $recorded_app_version"
 
         # Get last own build head
@@ -132,7 +132,7 @@ jobs:
           recorded_build_head=$(git rev-list --max-parents=0 HEAD)
           echo $recorded_build_head > $PWD/.ci/build_head-${{ github.ref_name }}.txt
         fi
-        echo "build_head=$recorded_build_head" >> "$GITHUB_OUTPUT"
+        echo "recorded_build_head=$recorded_build_head" >> "$GITHUB_OUTPUT"
         echo "Last recorded build head is $recorded_build_head"
 
         # Get last image version
@@ -147,7 +147,7 @@ jobs:
           recorded_image_version='0.0.1'
           echo $recorded_image_version > $PWD/.ci/image_version-${{ github.ref_name }}.txt
         fi
-        echo "image_version=$recorded_image_version" >> "$GITHUB_OUTPUT"
+        echo "recorded_image_version=$recorded_image_version" >> "$GITHUB_OUTPUT"
         echo "Last recorded image version is $recorded_image_version"
 
     - name: Get current version information
