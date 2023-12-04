@@ -53,7 +53,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        stage: [base, fpm, apache2]
+        stage: [fpm, apache2]
 
     env:
       app_name: ${{ inputs.app_name }}
