@@ -19,7 +19,6 @@
 ARG DEBIAN_VERSION=12.1 \
     COMPOSER_VERSION=1 \
     PHP_VERSION=8.2 \
-    SUITECRM_INSTALL_DIR=/suitecrm \
     SUITECRM_CONFIG_LOC=/docker-configs
 
 
@@ -117,6 +116,7 @@ ENV \
     SUITECRM_HOSTNAME=localhost \
     SUITECRM_SITE_NAME=SuiteCRM \
     SUITECRM_SITE_URL=example.com \
+    SUITECRM_INSTALL_DIR=/suitecrm \
     SUITECRM_INSTALLED=false
 
 # Install modules, clean up and modify values
@@ -158,11 +158,11 @@ RUN apt-get update && apt-get -y upgrade; \
     # Use php production config
     mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"; \
     # Make install dir and separate directory for configs. Entrypoint will link them.
-    mkdir ${SUITECRM_INSTALL_DIR} || echo "Installation directory ${SUITECRM_INSTALL_DIR} exists" ; \
+    mkdir /suitecrm || echo "Installation directory /suitecrm exists" ; \
     mkdir /docker-configs && chown www-data:www-data /docker-configs
 
 # Ensure we are installing on a volume
-VOLUME ${SUITECRM_INSTALL_DIR}
+VOLUME /suitecrm
 
 COPY fs /
 COPY --from=final --chown=www-data:www-data /final /usr/src/suitecrm
@@ -172,7 +172,7 @@ RUN chmod a+x /docker-entrypoint.sh; \
     chmod a+x /docker-cron.sh; \
     chmod a+rx /opt/*/*.sh;
 
-WORKDIR ${SUITECRM_INSTALL_DIR}
+WORKDIR /suitecrm
 USER 33:33
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
@@ -215,6 +215,7 @@ ENV \
     SUITECRM_HOSTNAME=localhost \
     SUITECRM_SITE_NAME=SuiteCRM \
     SUITECRM_SITE_URL=example.com \
+    SUITECRM_INSTALL_DIR=/suitecrm \
     SUITECRM_INSTALLED=false
 
 # Install modules, clean up and modify values
@@ -254,12 +255,12 @@ RUN apt-get update && apt-get -y upgrade; \
     # Use php production config
     mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"; \
     # Make install dir and separate directory for configs. Entrypoint will link them.
-    mkdir ${SUITECRM_INSTALL_DIR} || echo "Directory ${SUITECRM_INSTALL_DIR}} exists"; \
-    chown www-data:www-data ${SUITECRM_INSTALL_DIR}; \
+    mkdir /suitecrm || echo "Directory /suitecrm} exists"; \
+    chown www-data:www-data /suitecrm; \
     mkdir /docker-configs && chown www-data:www-data /docker-configs
 
 
-VOLUME ${SUITECRM_INSTALL_DIR}
+VOLUME /suitecrm
 
 COPY fs /
 COPY --from=final --chown=www-data:www-data /final /usr/src/suitecrm
@@ -268,8 +269,8 @@ COPY --from=final --chown=www-data:www-data /final /usr/src/suitecrm
 RUN chmod a+x /docker-entrypoint.sh; \
     chmod a+x /docker-cron.sh; \
     chmod a+rx /opt/*/*.sh;
-    
-WORKDIR ${SUITECRM_INSTALL_DIR}
+
+WORKDIR /suitecrm
 
 USER 33:33
 
