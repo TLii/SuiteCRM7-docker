@@ -19,7 +19,7 @@
 ARG DEBIAN_VERSION=12.1 \
     COMPOSER_VERSION=1 \
     PHP_VERSION=8.2 \
-    SUITECRM_CONFIG_LOC=/docker-configs
+    SUITECRM_CONFIG_LOC=/docker-configs \
     SUITECRM_BRANCH=hotfix
 
 
