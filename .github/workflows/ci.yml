@@ -129,8 +129,8 @@ jobs:
         if [[ -f $PWD/.ci/build_head-${{ github.ref_name }}.txt ]]; then
           recorded_build_head=$(cat $PWD/.ci/build_head-${{ github.ref_name }}.txt)
         else
-          recorded_build_head=''
-          touch $PWD/.ci/build_head-${{ github.ref_name }}.txt
+          recorded_build_head=$(git rev-list --max-parents=0 HEAD)
+          echo $recorded_build_head > $PWD/.ci/build_head-${{ github.ref_name }}.txt
         fi
         echo "build_head=$recorded_build_head" >> "$GITHUB_OUTPUT"
         echo "Last recorded build head is $recorded_build_head"
@@ -143,8 +143,9 @@ jobs:
             recorded_image_version="0.0.1"
           )
         else
-          recorded_image_version=''
-          touch $PWD/.ci/image_version-${{ github.ref_name }}.txt
+          echo "No recorded image version, using 0.0.1"
+          recorded_image_version='0.0.1'
+          echo $recorded_image_version > $PWD/.ci/image_version-${{ github.ref_name }}.txt
         fi
         echo "image_version=$recorded_image_version" >> "$GITHUB_OUTPUT"
         echo "Last recorded image version is $recorded_image_version"
