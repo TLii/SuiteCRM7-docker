@@ -20,11 +20,12 @@ ARG DEBIAN_VERSION=12.1 \
     COMPOSER_VERSION=1 \
     PHP_VERSION=8.2 \
     SUITECRM_CONFIG_LOC=/docker-configs
+    SUITECRM_BRANCH=hotfix
 
 
 ## INITIAL BUILD
 # Create initial base image
-FROM debian:${DEBIAN_VERSION}-slim as first
+FROM debian:${DEBIAN_VERSION}-slim as source
 RUN set -eux; \
     apt-get update && apt-get -y upgrade; \
     apt-get install -y --no-install-recommends \
@@ -49,9 +50,9 @@ RUN set -eux; \
 
 WORKDIR /build
 
-# Get source and use latest master
+# Get source and checkout intended branch
 RUN git clone https://github.com/salesagility/SuiteCRM.git .; \
-    git checkout hotfix;
+    git checkout ${SUITECRM_BRANCH};
 
 
 
@@ -61,7 +62,7 @@ FROM composer:$COMPOSER_VERSION AS composer
 
 
 # Run composer install to get dependencies
-FROM first as build-php
+FROM source as build-php
 COPY --from=composer /usr/bin/composer /usr/bin/composer
 
 WORKDIR /build
@@ -72,7 +73,7 @@ RUN composer install --no-dev;
 
 
 # Finalize build
-FROM first as final
+FROM source as final
 
 RUN mv /build /final
 
